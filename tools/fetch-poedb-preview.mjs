@@ -77,9 +77,7 @@ async function main() {
 
   let found = null;
   for (const v of probes) {
-    const url = `https://poedb.tw/tw/Version_${v.replace(/\./g, '')}`.replace(/Version_(\d)(\d+)0$/, 'Version_$1.$2.0');
-    // poedb 的 slug 其實是 Version_3.29.0(帶點),直接組:
-    const realUrl = `https://poedb.tw/tw/Version_${v}`;
+    const realUrl = `https://poedb.tw/tw/Version_${v}`;   // slug 帶點:Version_3.29.0
     try {
       const res = await fetch(realUrl, { headers: UA });
       if (!res.ok) { console.log(`probe ${v}: HTTP ${res.status}(尚無前瞻頁)`); continue; }
@@ -89,7 +87,6 @@ async function main() {
       found = { version: v, url: realUrl, ...parsed };
       break;
     } catch (e) { console.log(`probe ${v}: ${e.message}`); }
-    void url;
   }
 
   if (!found) {
