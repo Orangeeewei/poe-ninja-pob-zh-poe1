@@ -1,0 +1,18 @@
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+
+# 資料匯出的中間產物(不進版控；data/*.json 才是成品)
+tools/data-export/.cache/
+tools/data-export/tables/
+tools/data-export/files/
+tools/data-export/*.csd
+tools/data-export/config.json
+tools/data-export/schema.json
+
+# 交接文件(只給接手的視窗看,不進 github)
+HANDOFF-交接.md
+
+# 打包輸出
+dist/

@@ -1,0 +1,95 @@
+name: Update PoE2 translation data
+
+on:
+  schedule:
+    - cron: '0 18 * * *'   # 每天 UTC 18:00(台灣 02:00)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 1) 偵測目前 PoE2 的 CDN patch 版本(4.x.x.x.x)
+      - name: 偵測 PoE2 patch 版本
+        id: patch
+        run: echo "version=$(node tools/data-export/get-patch.mjs)" >> "$GITHUB_OUTPUT"
+
+      # 2) 安裝資料匯出工具
+      - name: 安裝 pathofexile-dat
+        working-directory: tools/data-export
+        run: npm install --no-audit --no-fund
+
+      # 3) 動態產生 config.json 並匯出表(英 + 繁中)
+      - name: 產生 config 並匯出遊戲資料表
+        working-directory: tools/data-export
+        env:
+          PATCH: ${{ steps.patch.outputs.version }}
+        run: |
+          # config.json 與 schema.json 皆已 gitignore(匯出中間產物,不進版控)。
+          # gen-config.mjs = 單一事實來源:表清單來自 relevance.mjs、每表 string 欄由 schema
+          # 動態推導、過濾掉當前 patch bundle 不存在的表;schema 自動從 SCHEMA_URL 下載。
+          # → 未來新增欄位/改 patch 都自動跟上,不再有「兩處 heredoc 漂移」的問題。
+          node gen-config.mjs
+          node node_modules/pathofexile-dat/dist/cli/run.js
+
+      # 4) 重建名稱字典:POEDB 爬蟲(技能/職業/傳奇)→ 再合併資料匯出(通貨/底材/天賦)
+      - name: 重建名稱字典
+        run: |
+          node tools/build-dict.mjs
+          node tools/data-export/build-names.mjs
+
+      - name: 重建描述字典(通貨/技能說明/支援寶石)
+        working-directory: tools/data-export
+        run: node build-descriptions.mjs
+
+      - name: 重建自動 UI 字典(物品類別/職業名)
+        working-directory: tools/data-export
+        run: node build-ui.mjs
+
+      # 5) 重建詞綴模板(中英 stat 模板)
+      - name: 重建詞綴模板
+        working-directory: tools/data-export
+        env:
+          POE2_PATCH: ${{ steps.patch.outputs.version }}
+        run: node build-stats.mjs
+
+      # 6) 重算版本檔(build 用毫秒時間戳,確保比舊的新)
+      - name: 重算版本檔
+        run: node tools/build-version.mjs
+
+      # 7) 有變動才 commit
+      - name: 提交更新
+        run: |
+          if [[ -n "$(git status --porcelain data/)" ]]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add data/dict.json data/stat-templates.json data/version.json
+            git commit -m "chore: 自動更新 PoE2 翻譯資料(patch ${{ steps.patch.outputs.version }})"
+            git push
+            echo "已更新並推送。"
+          else
+            echo "資料沒有變動，略過。"
+          fi
+
+      # 8) 稽核(資訊用,放最後 + continue-on-error → 絕不影響每日 build)。
+      #    全表掃描,把「有官方繁中卻還沒對接」的欄位印在 log;每次改版看一眼,
+      #    若有新出現、poe.ninja 會顯示的相關欄位,人工加進 relevance.mjs 即可。
+      - name: 稽核未對接的中文欄位(資訊)
+        if: always()
+        continue-on-error: true
+        working-directory: tools/data-export
+        env:
+          PATCH: ${{ steps.patch.outputs.version }}
+        run: |
+          node gen-config.mjs --all
+          node node_modules/pathofexile-dat/dist/cli/run.js
+          node audit-coverage.mjs

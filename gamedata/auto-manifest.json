@@ -1,0 +1,60 @@
+{
+  "files": {
+    "active_skill_types.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "buffs.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "characters.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "cluster_jewel_notables.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "cluster_jewels.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "cost_types.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "flavour.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "gem_tags.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "item_classes.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "stat_value_handlers.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "stats.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "tag_details.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "tags.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    },
+    "world_areas.json": {
+      "firstSeen": "2026-07-21",
+      "status": "unvalidated"
+    }
+  }
+}

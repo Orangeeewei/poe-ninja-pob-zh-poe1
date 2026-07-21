@@ -1,0 +1,143 @@
+{
+  "patch": "3.28.0.16",
+  "updatedAt": "2026-07-21T13:27:55.808Z",
+  "entries": [
+    {
+      "table": "Chests",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 2484
+    },
+    {
+      "table": "NecropolisPacks",
+      "route": "desc",
+      "columns": [
+        "Name",
+        "Description",
+        "PackLeader1",
+        "PackLeader2"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 918
+    },
+    {
+      "table": "PassiveSkills",
+      "route": "desc",
+      "columns": [
+        "NameHardmode"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 580
+    },
+    {
+      "table": "ReminderText",
+      "route": "desc",
+      "columns": [
+        "Text"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 444
+    },
+    {
+      "table": "LeagueInfo",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 335
+    },
+    {
+      "table": "IndexableSkillGems",
+      "route": "desc",
+      "columns": [
+        "Name1",
+        "Name2"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 286
+    },
+    {
+      "table": "MercenarySkills",
+      "route": "desc",
+      "columns": [
+        "Name",
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 264
+    },
+    {
+      "table": "MercenarySupports",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 259
+    },
+    {
+      "table": "DelveFeatures",
+      "route": "desc",
+      "columns": [
+        "Name",
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 240
+    },
+    {
+      "table": "ClientStrings2",
+      "route": "desc",
+      "columns": [
+        "Text"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 233
+    },
+    {
+      "table": "MercenaryFlavourText",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 231
+    },
+    {
+      "table": "ArchnemesisMods",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 204
+    },
+    {
+      "table": "BetrayalTraitorRewards",
+      "route": "desc",
+      "columns": [
+        "Description",
+        "Description2"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.28.0.16",
+      "loc": 204
+    }
+  ]
+}

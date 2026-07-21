@@ -1,0 +1,24 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c1d24"/>
+      <stop offset="100%" stop-color="#0a0a0d"/>
+    </linearGradient>
+    <linearGradient id="badge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3da9fc"/>
+      <stop offset="100%" stop-color="#2d6cf6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 黑底圓角方 -->
+  <rect x="2" y="2" width="124" height="124" rx="26" fill="url(#bg)"/>
+
+  <!-- 忍者眼帶(白) + 兩眼 -->
+  <ellipse cx="64" cy="58" rx="42" ry="15" fill="#f4f6fb"/>
+  <ellipse cx="50" cy="58" rx="6.5" ry="8.5" fill="#0a0a0d"/>
+  <ellipse cx="78" cy="58" rx="6.5" ry="8.5" fill="#0a0a0d"/>
+
+  <!-- zh 角標 -->
+  <circle cx="95" cy="96" r="29" fill="url(#badge)" stroke="#0a0a0d" stroke-width="5"/>
+  <text x="95" y="107" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" fill="#ffffff" text-anchor="middle">zh</text>
+</svg>

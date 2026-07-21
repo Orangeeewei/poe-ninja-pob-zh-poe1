@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "poe.ninja PoE2 中文化",
+  "version": "2.3.0",
+  "description": "把 poe.ninja 的 PoE2 頁面即時中文化:名稱(技能/職業/通貨/底材/天賦)、詞綴/數據敘述、介面標籤、描述與風味文字;側欄篩選清單支援中文搜尋。資料來自官方遊戲資料,與 POEDB 同源,每日自動更新。",
+  "homepage_url": "https://github.com/Orangeeewei/poe-ninja-pob-zh",
+
+  "permissions": ["storage", "unlimitedStorage", "alarms"],
+  "host_permissions": [
+    "https://poe.ninja/*",
+    "https://raw.githubusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://poe.ninja/poe2/*"
+      ],
+      "js": ["translator.js"],
+      "run_at": "document_end",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://poe.ninja/poe2/*"
+      ],
+      "js": ["search-inject.js"],
+      "run_at": "document_end",
+      "world": "MAIN",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["data/dict.json", "data/ui-labels.json", "data/stat-templates.json", "data/version.json"],
+      "matches": ["https://poe.ninja/*"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
+
