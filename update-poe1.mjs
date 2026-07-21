@@ -47,6 +47,8 @@ try {
   node([join(repo, 'tools', 'fetch-repoe.mjs')], repo);
   // PoB 傳奇資料(跟 PoB master 走,獨立於 patch)每次刷
   node([join(repo, 'tools', 'fetch-pob-uniques.mjs')], repo);
+  // 季前前瞻偵測(poedb Version_X.Y.0):一發布就自動抓進 data/preview.json,MCP 標「尚未上線」
+  node([join(repo, 'tools', 'fetch-poedb-preview.mjs')], repo);
 
   log('完成 ✅');
 } catch (e) {
