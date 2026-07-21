@@ -104,6 +104,16 @@ dict.json 3.07MB → 4.01MB(全在獨立區塊);RePoE 自動發現 14 個新資�
 gem_tags/item_classes/buffs/world_areas…)→ gamedata 45.5MB → 54.7MB。防爆上限外仍有 144 欄候選
 (每輪最多收 20,或人工轉正)。
 
+## 8.5 Special 傳奇解析(2026-07-21)—— 1287 → **1303 款**
+- 詞池表(`WatchersEye.lua`/`Special/BoundByDestiny.lua`,`["Key"]={affix="","行",…}` 格式,
+  多行 mod 整組收):**Watcher's Eye 101 條光環詞池**(排除 SublimeVision/SummonArbalist,同 PoB 邏輯)、
+  **Sublime Vision 17 條**(每光環一組 3 行)、**Bound by Destiny 54 條**。標 `pickNote`(精確
+  說明「隨機 N 條」語意),search_unique 可用詞池文字反查(如 "while affected by Zealotry")。
+- `Special/Generated.lua` 靜態標頭(`[[..]]` 或字串列)→ 13 款程式生成傳奇收 **stub**
+  (Paradoxica/Precursor's Emblem/Impossible Escape/Megalomaniac/Forbidden Shako/Vorana's March…):
+  名稱/底材/聯盟/來源可查,標 `generated`,get_unique 明示「詞綴為程式生成選項池,完整選項看 PoB」。
+  兩者皆不再「找不到」。graft.lua 實為空檔(return {})。
+
 ## 9. 對抗式驗證 + 修復(2026-07-21,詳見 poe-mcp 報告)
 - calc_build:pobb.in/tmNIKeb5f8HB 與 PoB GUI 快取值**逐位元一致**;5 種永恆珠寶全過;
   `.zip.part*` 分割解壓逐位元驗證;HeadlessWrapper 加 io.open 唯讀護欄(修 PoB 目錄被寫 .bin)。
