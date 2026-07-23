@@ -16,3 +16,7 @@ HANDOFF-交接.md
 
 # 打包輸出
 dist/
+
+# MCP 開機自檢的執行期檔案(節流戳記 + 併發鎖)
+.last-check
+.update.lock

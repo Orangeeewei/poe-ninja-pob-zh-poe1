@@ -49,6 +49,11 @@ try {
   node([join(repo, 'tools', 'fetch-pob-uniques.mjs')], repo);
   // 季前前瞻偵測(poedb Version_X.Y.0):一發布就自動抓進 data/preview.json,MCP 標「尚未上線」
   node([join(repo, 'tools', 'fetch-poedb-preview.mjs')], repo);
+  // 2026-07-23 新增:天賦樹(本機 PoB TreeData)/ 交易詞綴對照(Awakened 鏡像)/ 命運卡(poewiki)
+  // 各自失敗不中斷整體(來源獨立,壞一個不該拖垮每日更新)
+  for (const t of ['extract-tree.mjs', 'fetch-trade-stats.mjs', 'fetch-divcards.mjs']) {
+    try { node([join(repo, 'tools', t)], repo); } catch (e) { log(`⚠️ ${t} 失敗(略過):${e.message}`); }
+  }
 
   log('完成 ✅');
 } catch (e) {
