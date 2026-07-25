@@ -1,6 +1,6 @@
 {
-  "patch": "3.28.0.16",
-  "updatedAt": "2026-07-21T13:27:55.808Z",
+  "patch": "3.29.0.2.2",
+  "updatedAt": "2026-07-25T12:37:53.442Z",
   "entries": [
     {
       "table": "Chests",
@@ -29,7 +29,8 @@
       "table": "PassiveSkills",
       "route": "desc",
       "columns": [
-        "NameHardmode"
+        "NameHardmode",
+        "FlavourText"
       ],
       "status": "unvalidated",
       "firstSeen": "3.28.0.16",
@@ -138,6 +139,169 @@
       "status": "unvalidated",
       "firstSeen": "3.28.0.16",
       "loc": 204
+    },
+    {
+      "table": "FaridunWishes",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 178
+    },
+    {
+      "table": "IndexableSupportGems",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 172
+    },
+    {
+      "table": "SynthesisAreas",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 167
+    },
+    {
+      "table": "BattlePassRewards",
+      "route": "desc",
+      "columns": [
+        "RewardTitle",
+        "RewardDescription"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 144
+    },
+    {
+      "table": "BestiaryRecipes",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 144
+    },
+    {
+      "table": "MapPins",
+      "route": "desc",
+      "columns": [
+        "Name",
+        "FlavourText"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 140
+    },
+    {
+      "table": "RecipeUnlockDisplay",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 130
+    },
+    {
+      "table": "PassiveSkillOverrides",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 128
+    },
+    {
+      "table": "CurrencyExchangeCategories",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 124
+    },
+    {
+      "table": "SynthesisRewardTypes",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 107
+    },
+    {
+      "table": "ItemisedCorpse",
+      "route": "desc",
+      "columns": [
+        "MonsterAbilities"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 102
+    },
+    {
+      "table": "UITalkText",
+      "route": "desc",
+      "columns": [
+        "Text"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 98
+    },
+    {
+      "table": "LakeRooms",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 93
+    },
+    {
+      "table": "Archetypes",
+      "route": "desc",
+      "columns": [
+        "AscendancyClassName",
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 90
+    },
+    {
+      "table": "CharacterStartStates",
+      "route": "ui",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 90
+    },
+    {
+      "table": "IncursionRooms",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.2",
+      "loc": 87
     }
   ]
 }

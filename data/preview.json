@@ -2,9 +2,9 @@
  "version": "3.29.0",
  "title": "版本更新 3.29.0",
  "url": "https://poedb.tw/tw/Version_3.29.0",
- "status": "upcoming",
+ "status": "released",
  "currentPatch": "3.28.0.16",
- "fetchedAt": "2026-07-23T16:42:10.066Z",
+ "fetchedAt": "2026-07-23T16:45:07.604Z",
  "sections": [
   {
    "id": "tableofcontents",
