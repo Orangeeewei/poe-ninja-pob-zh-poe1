@@ -3,7 +3,7 @@
 // log 寫入 update.log。用 Node 而非 PowerShell:避 PS5.1 讀 UTF-8/CJK 腳本的編碼坑。
 // ★ 進度標記:每步輸出「[進度 i/N] 標籤」——MCP 端(lib-autoupdate.updateProgress)靠這個
 //   算百分比,畫即時進度條。改動步驟時只要維持這個格式即可。
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,8 +12,86 @@ const repo = dirname(fileURLToPath(import.meta.url));
 const de = join(repo, 'tools', 'data-export');
 const logFile = join(repo, 'update.log');
 const log = (m) => { const line = `${new Date().toISOString()}  ${m}`; console.log(line); try { appendFileSync(logFile, line + '\n'); } catch {} };
-const node = (args, cwd, env = {}) => execFileSync(process.execPath, args, { cwd, stdio: 'inherit', env: { ...process.env, ...env } });
+// stdout 照舊 inherit(進 update.log,保留「Exporting table …」等即時脈絡);
+// stderr 改用 pipe 捕捉 —— 子行程 console.error + process.exit(1) 在「stderr 被重導向到檔案」
+// 時訊息會整個消失(MCP 背景更新正是這情況),導致 log 只剩一句無用的 Command failed。
+const node = (args, cwd, env = {}) => {
+  try {
+    return execFileSync(process.execPath, args, { cwd, stdio: ['ignore', 'inherit', 'pipe'], env: { ...process.env, ...env } });
+  } catch (e) {
+    const err = (e.stderr?.toString() || '').trim();
+    if (err) e.message += `\n--- stderr(尾端)---\n${err.split('\n').slice(-15).join('\n')}`;
+    throw e;
+  }
+};
 const nodeOut = (args, cwd, env = {}) => execFileSync(process.execPath, args, { cwd, env: { ...process.env, ...env } }).toString().trim();
+
+// —— 匯出看門狗:自動跳過「讀取卡死」的表 ——
+// pathofexile-dat 讀某些表(社群 schema 與現行遊戲資料欄位對不上)會讀到垃圾陣列長度 →
+// 陷入無窮配置:不當機、不報錯、CPU 燒滿、永遠不結束(2026-08 改版的 AlternateTreeArt)。
+// 改版後中招的可能是任何一張表,故不寫死清單:偵測到「久無輸出」就殺掉本輪,把卡住的表名
+// 記進 skip-tables.json(gen-config 會據此排除),重新產生 config 再跑。bundle 已快取,重跑很快。
+const STALL_SEC = Math.max(30, Number(process.env.POE_EXPORT_STALL_SEC) || 150);
+const MAX_SKIP = Math.max(1, Number(process.env.POE_EXPORT_MAX_SKIP) || 8);
+const skipFile = join(de, 'skip-tables.json');
+
+function runExportOnce(envP) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['node_modules/pathofexile-dat/dist/cli/run.js'],
+      { cwd: de, env: { ...process.env, ...envP } });
+    let lastTable = null, errBuf = '', timer = null, settled = false;
+    const arm = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        settled = true;
+        child.kill();
+        log(`⚠️ 匯出停滯 ${STALL_SEC}s(卡在「${lastTable || '?'}」)→ 中止本輪`);
+        resolve({ stalled: lastTable });
+      }, STALL_SEC * 1000);
+    };
+    child.stdout.on('data', (b) => {
+      const s = b.toString();
+      process.stdout.write(s);   // 保留「Exporting table …」即時脈絡進 update.log
+      const m = [...s.matchAll(/Exporting table "(?:.*\/)?([^"/]+)"/g)].pop();
+      if (m) lastTable = m[1];
+      arm();
+    });
+    child.stderr.on('data', (b) => { errBuf += b.toString(); arm(); });
+    child.on('error', (e) => { if (!settled) { settled = true; clearTimeout(timer); reject(e); } });
+    child.on('close', (code, signal) => {
+      if (settled) return;       // 已由看門狗處理
+      settled = true;
+      clearTimeout(timer);
+      if (code === 0) return resolve({ ok: true });
+      const tail = errBuf.trim().split('\n').slice(-15).join('\n');
+      reject(new Error(`匯出失敗(exit ${code ?? signal})${tail ? `\n--- stderr(尾端)---\n${tail}` : ''}`));
+    });
+    arm();
+  });
+}
+
+async function exportWithWatchdog(envP) {
+  const skippedThisRun = [];
+  for (;;) {
+    const r = await runExportOnce(envP);
+    if (r.ok) {
+      if (skippedThisRun.length) {
+        log(`⚠️ 本次跳過 ${skippedThisRun.length} 張讀取卡死的表:${skippedThisRun.join(', ')}` +
+            `(已記入 skip-tables.json;社群 schema 修好後清空該檔即恢復)`);
+      }
+      return;
+    }
+    if (!r.stalled) throw new Error('匯出停滯但抓不到卡住的表名 —— 請看 update.log');
+    const cur = existsSync(skipFile) ? JSON.parse(readFileSync(skipFile, 'utf8')) : [];
+    if (cur.includes(r.stalled)) throw new Error(`「${r.stalled}」已在 skip-tables.json 卻仍停滯,停止重試`);
+    if (cur.length >= MAX_SKIP) throw new Error(`已跳過 ${cur.length} 張表仍無法完成匯出,停止重試(疑似 schema 大規模失準)`);
+    cur.push(r.stalled);
+    writeFileSync(skipFile, JSON.stringify(cur, null, 2), 'utf8');
+    skippedThisRun.push(r.stalled);
+    log(`↻ 已將「${r.stalled}」加入 skip-tables.json,重新產生 config 後重跑匯出`);
+    node(['gen-config.mjs', '--all'], de, envP);   // schema 本輪已重抓,不必再下載
+  }
+}
 
 try {
   const patch = nodeOut(['get-patch.mjs'], de);
@@ -32,8 +110,11 @@ try {
   if (rebuild) {
     // §12 自我擴充:改版日用 --all 匯出全部表 → detect-new 偵測新結構 → build-* 自動涵蓋新表
     steps.push(
-      ['匯出全部遊戲表', () => node(['gen-config.mjs', '--all'], de, envP)],
-      ['解包遊戲資料(最耗時)', () => node(['node_modules/pathofexile-dat/dist/cli/run.js'], de, envP)],
+      // ★ --refresh-schema 必要:pathofexile-dat CLI 每次都抓「線上最新」schema,
+      //   gen-config 卻預設吃本機 cache。改版後欄位變動會讓 config 列出新 schema 沒有的欄
+      //   → CLI 報「doesn't have a column named X」直接 exit(1)。改版日一律重抓 schema。
+      ['匯出全部遊戲表', () => node(['gen-config.mjs', '--all', '--refresh-schema'], de, envP)],
+      ['解包遊戲資料(最耗時)', () => exportWithWatchdog(envP)],
       ['偵測新資料結構', () => node(['detect-new.mjs'], de, envP)],
       ['重建名稱對照', () => node(['build-names.mjs'], de, envP)],
       ['重建描述對照', () => node(['build-descriptions.mjs'], de, envP)],
@@ -59,7 +140,7 @@ try {
   for (let i = 0; i < N; i++) {
     const [label, fn, opt] = steps[i];
     log(`[進度 ${i + 1}/${N}] ${label}`);
-    try { fn(); } catch (e) {
+    try { await fn(); } catch (e) {   // 匯出步驟是 async(看門狗);其餘 sync 步驟 await 無害
       if (opt?.soft) log(`⚠️ ${label} 失敗(略過):${e.message}`);
       else throw e;
     }

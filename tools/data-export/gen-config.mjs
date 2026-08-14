@@ -32,6 +32,7 @@ import { allTableNames, SPECIAL_TABLES } from './relevance.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const schemaPath = path.join(here, 'schema.json');
 const configPath = path.join(here, 'config.json');
+const skipPath = path.join(here, 'skip-tables.json');
 
 const FALLBACK_PATCH = '3.28.0.16';   // PoE1(實測 patch.pathofexile.com:12995 回傳值)
 const ALL = process.argv.includes('--all');
@@ -77,6 +78,15 @@ for (const t of schema.tables) {
   if (!cur || ((t.validFor & GAME_BIT) && !(cur.validFor & GAME_BIT))) byName.set(t.name, t);
 }
 
+// 「讀取卡死表」黑名單。某些表的社群 schema 與現行遊戲資料對不上(欄位偏移),
+// pathofexile-dat 會讀到垃圾陣列長度 → 陷入無窮配置:不當機、不報錯、CPU 燒滿、永不結束。
+// update-poe1.mjs 的看門狗偵測到停滯會把卡住的表名寫進 skip-tables.json 再重跑;這裡負責
+// 把它們排除在 config 之外。**資料驅動、不寫死**:社群 schema 修好後清空該檔即恢復匯出。
+let skipSet = new Set();
+if (existsSync(skipPath)) {
+  try { skipSet = new Set(JSON.parse(readFileSync(skipPath, 'utf8'))); } catch { /* 壞檔=視為無黑名單 */ }
+}
+
 // 當前 patch 的 bundle 實際存在哪些表(小寫檔名集合);用來過濾 schema 的幽靈表。
 const cdn = await loaders.CdnBundleLoader.create(path.join(here, '.cache'), patch);
 const existing = await listDatTables(cdn);
@@ -109,6 +119,7 @@ for (const name of [...new Set(wanted)].sort((a, b) => a.localeCompare(b))) {
   const st = byName.get(name);
   if (!st) { missingFromSchema.push(name); continue; }
   if (!exists(name)) { skippedGhost++; continue; }
+  if (skipSet.has(name)) continue;
   const cols = columnsOf(st);
   if (cols.length === 0) continue;
   tables.push({ name, columns: cols });
@@ -120,8 +131,12 @@ writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
 
 console.log(
   `gen-config[${ALL ? 'ALL' : 'relevance'}]: patch=${patch} → ${tables.length} 表 / ${colCount} string 欄` +
-  `(略過 ${skippedGhost} 個 bundle 不存在的表)-> config.json`
+  `(略過 ${skippedGhost} 個 bundle 不存在的表` +
+  `${skipSet.size ? `、${skipSet.size} 個讀取卡死表` : ''})-> config.json`
 );
+if (skipSet.size) {
+  console.warn(`⚠️ skip-tables.json 排除中(社群 schema 對不上現行資料):${[...skipSet].join(', ')}`);
+}
 if (missingFromSchema.length) {
   console.warn(`⚠️ relevance.mjs 列了但 schema 沒有的表(可能改名):${missingFromSchema.join(', ')}`);
 }
