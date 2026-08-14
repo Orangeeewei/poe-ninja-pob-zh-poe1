@@ -1,6 +1,6 @@
 {
-  "patch": "3.29.0.2.2",
-  "updatedAt": "2026-07-25T12:37:53.442Z",
+  "patch": "3.29.3.1.2",
+  "updatedAt": "2026-08-14T14:42:54.500Z",
   "entries": [
     {
       "table": "Chests",
@@ -185,7 +185,8 @@
       "table": "BestiaryRecipes",
       "route": "desc",
       "columns": [
-        "Description"
+        "Description",
+        "Notes"
       ],
       "status": "unvalidated",
       "firstSeen": "3.29.0.2.2",
@@ -266,7 +267,9 @@
       "table": "LakeRooms",
       "route": "desc",
       "columns": [
-        "Name"
+        "Name",
+        "Description",
+        "ReminderText"
       ],
       "status": "unvalidated",
       "firstSeen": "3.29.0.2.2",
@@ -297,11 +300,329 @@
       "table": "IncursionRooms",
       "route": "desc",
       "columns": [
-        "Name"
+        "Name",
+        "FlavourText",
+        "Description"
       ],
       "status": "unvalidated",
       "firstSeen": "3.29.0.2.2",
       "loc": 87
+    },
+    {
+      "table": "UltimatumModifiers",
+      "route": "desc",
+      "columns": [
+        "Name",
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 84
+    },
+    {
+      "table": "DelveCraftingModifierDescriptions",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 83
+    },
+    {
+      "table": "ExpeditionDeals",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 82
+    },
+    {
+      "table": "RitualRuneTypes",
+      "route": "ui",
+      "columns": [
+        "Type"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 82
+    },
+    {
+      "table": "RitualRuneTypes",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 82
+    },
+    {
+      "table": "ItemisedNecropolisPacks",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 79
+    },
+    {
+      "table": "AncestralTrialUnits",
+      "route": "desc",
+      "columns": [
+        "Name",
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 74
+    },
+    {
+      "table": "CraftingBenchOptions",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 74
+    },
+    {
+      "table": "HarvestCraftOptions",
+      "route": "desc",
+      "columns": [
+        "Text",
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 74
+    },
+    {
+      "table": "HeistObjectives",
+      "route": "ui",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 74
+    },
+    {
+      "table": "Commands",
+      "route": "ui",
+      "columns": [
+        "Command"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 68
+    },
+    {
+      "table": "UltimatumItemisedRewards",
+      "route": "desc",
+      "columns": [
+        "RewardText"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 68
+    },
+    {
+      "table": "AwardDisplay",
+      "route": "desc",
+      "columns": [
+        "Text"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 65
+    },
+    {
+      "table": "MercenaryBuilds",
+      "route": "desc",
+      "columns": [
+        "BuildName"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.2.3",
+      "loc": 65
+    },
+    {
+      "table": "Incubators",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 63
+    },
+    {
+      "table": "LabyrinthCraftOptions",
+      "route": "desc",
+      "columns": [
+        "Text"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 61
+    },
+    {
+      "table": "LabyrinthSecrets",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 52
+    },
+    {
+      "table": "BetrayalUpgrades",
+      "route": "desc",
+      "columns": [
+        "Name",
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 50
+    },
+    {
+      "table": "Tips",
+      "route": "desc",
+      "columns": [
+        "Text"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 50
+    },
+    {
+      "table": "GemTags",
+      "route": "ui",
+      "columns": [
+        "Tag"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 47
+    },
+    {
+      "table": "AncestralTrialItems",
+      "route": "desc",
+      "columns": [
+        "Name",
+        "FlavorText"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 45
+    },
+    {
+      "table": "BestiaryGenus",
+      "route": "ui",
+      "columns": [
+        "Name",
+        "Name2"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 42
+    },
+    {
+      "table": "Notifications",
+      "route": "desc",
+      "columns": [
+        "Message"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 42
+    },
+    {
+      "table": "PassiveOverrideLimits",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 41
+    },
+    {
+      "table": "UltimatumEncounters",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 40
+    },
+    {
+      "table": "SanctumDeferredRewardCategories",
+      "route": "desc",
+      "columns": [
+        "NamePlural"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.3",
+      "loc": 37
+    },
+    {
+      "table": "BYOCrafting",
+      "route": "desc",
+      "columns": [
+        "Description"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.4.2",
+      "loc": 33
+    },
+    {
+      "table": "UniqueMaps",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.4.2",
+      "loc": 33
+    },
+    {
+      "table": "AfflictionRewardTypeVisuals",
+      "route": "ui",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.4.2",
+      "loc": 32
+    },
+    {
+      "table": "MapRelicInventoryLayout",
+      "route": "desc",
+      "columns": [
+        "UnlockText"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.4.2",
+      "loc": 32
+    },
+    {
+      "table": "BlightTowers",
+      "route": "desc",
+      "columns": [
+        "Name"
+      ],
+      "status": "unvalidated",
+      "firstSeen": "3.29.0.4.2",
+      "loc": 31
     }
   ]
 }
