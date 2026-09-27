@@ -1,0 +1,67 @@
+name: Release
+
+# 推上 main 時,若 manifest.json 的版本還沒有對應的 tag(v<version>),
+# 就自動:建 tag → 打包 zip → 建 GitHub Release(附 zip,說明取自 README 更新紀錄該版段落)。
+# 版本沒變(例如每日資料自動更新的 commit)就什麼都不做。
+on:
+  push:
+    branches: [main]
+    paths:
+      - manifest.json
+      - translator.js
+      - background.js
+      - search-inject.js
+      - data/**
+      - tools/pack-extension.mjs
+      - tools/release-notes.mjs
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 讀取版本並檢查 tag
+        id: ver
+        run: |
+          VER=$(node -p "require('./manifest.json').version")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$VER" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "v$VER 已存在,略過。"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 打包
+        if: steps.ver.outputs.exists == 'false'
+        run: node tools/pack-extension.mjs
+
+      - name: 產生 Release 說明(README 更新紀錄該版段落)
+        if: steps.ver.outputs.exists == 'false'
+        run: node tools/release-notes.mjs "${{ steps.ver.outputs.version }}" > release-notes.md && cat release-notes.md
+
+      - name: 建 tag 與 Release
+        if: steps.ver.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VER: ${{ steps.ver.outputs.version }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VER" -m "v$VER"
+          git push origin "v$VER"
+          gh release create "v$VER" "dist/poe-ninja-pob-zh-poe1-$VER.zip" \
+            --title "poe.ninja PoE1 中文化 v$VER" \
+            --notes-file release-notes.md

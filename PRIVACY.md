@@ -1,6 +1,6 @@
 # 隱私權政策 / Privacy Policy
 
-**擴充功能名稱 / Extension:** poe.ninja PoE2 中文化
+**擴充功能名稱 / Extension:** poe.ninja PoE1 中文化
 **最後更新 / Last updated:** 2026-06-05
 
 ---
@@ -22,7 +22,7 @@
 ### 權限用途
 - `storage`:在本機快取翻譯字典,避免重複下載。
 - `alarms`:每天排程一次檢查是否有新版翻譯資料。
-- `host: poe.ninja`:在 poe.ninja 的 PoE2 頁面注入翻譯(擴充的核心用途)。
+- `host: poe.ninja`:在 poe.ninja 的 PoE1 頁面注入翻譯(擴充的核心用途)。
 - `host: raw.githubusercontent.com`:下載公開的 JSON 翻譯資料檔。
 
 如有疑問,請至專案的 GitHub Issues 提出。
@@ -47,7 +47,7 @@ This extension **does not collect, store, or transmit any personal data**.
 ### Permission justifications
 - `storage`: cache the translation dictionary locally to avoid re-downloading.
 - `alarms`: schedule a once-daily check for updated translation data.
-- `host: poe.ninja`: inject translations on poe.ninja PoE2 pages (the extension's core purpose).
+- `host: poe.ninja`: inject translations on poe.ninja PoE1 pages (the extension's core purpose).
 - `host: raw.githubusercontent.com`: download the public JSON translation data files.
 
 For questions, please open an issue on the project's GitHub.
