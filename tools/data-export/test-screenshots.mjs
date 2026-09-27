@@ -107,6 +107,46 @@ const HTML = `<body>
   <div class="line" id="g9">Passives in Radius of <a>Eldritch Battery</a> can be Allocated without being connected to your tree</div>
   <div class="line" id="g10">Passives in Radius of Ancestral Bond can be Allocated without being connected to your tree</div>
 
+  <!-- 第九輪(冰霜之捷 tooltip,2026-09-04):API gemTabs[].pages[].skillName 分頁標題
+       (GrantedEffectLabels)+ 多行模板(API 字串含 "\n",poe.ninja 以 pre-line 或 <br> 呈現,
+       且 GGG 繁中只有一行 → build-stats 必須產「換行→空白」整段版本) -->
+  <div class="line" id="h1">Explosion</div>
+  <div class="line" id="h1b">Buff</div>
+  <div class="line whitespace-pre-line" id="h2">100% of Explosion <span data-tooltip-trigger="true">Physical</span> Damage
+<span data-tooltip-trigger="true">Converted</span> to <span data-tooltip-trigger="true">Cold</span> Damage</div>
+  <div class="line" id="h3">100% of Explosion <span>Physical</span> Damage<br><span>Converted</span> to <span>Cold</span> Damage</div>
+  <div class="line" id="h4">Can't be <span>Evaded</span></div>
+  <div class="line" id="h5">Enemies you <span>Shatter</span> explode</div>
+
+  <!-- 第十輪(精髓單品頁,2026-09-04):「物品類型 or 物品類型: 詞綴」前綴(ClientStrings EssenceCategory*
+       組合字串,>30 字)+ 站方 UI Exchange / Price history -->
+  <div class="line whitespace-pre-line" id="s1"><span>One Handed </span><span data-tooltip-trigger="true">Melee</span><span> </span><span data-tooltip-trigger="true">Weapon</span><span> or </span><span data-tooltip-trigger="true">Bow</span><span>: </span><span data-tooltip-trigger="true">Gain</span><span> (15-20)% of Damage as Extra </span><span data-tooltip-trigger="true">Fire</span><span> Damage</span></div>
+  <div class="line whitespace-pre-line" id="s2"><span>Two Handed </span><span data-tooltip-trigger="true">Melee</span><span> </span><span data-tooltip-trigger="true">Weapon</span><span> or </span><span data-tooltip-trigger="true">Crossbow</span><span>: </span><span data-tooltip-trigger="true">Gain</span><span> (25-33)% of Damage as Extra </span><span data-tooltip-trigger="true">Fire</span><span> Damage</span></div>
+  <div class="line" id="s3">Exchange</div>
+  <div class="line" id="s4">Price history</div>
+  <div class="line whitespace-pre-line" id="s6"><span data-tooltip-trigger="true">Jewellery</span><span>: +20% to Maximum </span><span data-tooltip-trigger="true">Quality</span></div>
+  <div class="line whitespace-pre-line" id="s7"><span>Body Armour: Allocates a random </span><span data-tooltip-trigger="true">Notable</span><span> Passive Skill</span></div>
+  <!-- 第十一輪(傳奇武器頁,2026-09-04):類別行文化前綴、⟦ ⟧ 符文詞綴、屬性行「標籤: 數值」拆關鍵字 span -->
+  <div class="property" id="u1"><span><span>Ezomyte </span><span data-tooltip-trigger="true">Wand</span><span></span></span> </div>
+  <div class="line" id="u2"><span>⟦ +300 to maximum </span><span data-tooltip-trigger="true">Runic Ward</span><span> ⟧</span></div>
+  <div class="line" id="u3"><span>⟦ (30-50)% increased Mana Regeneration Rate ⟧</span></div>
+  <div class="line" id="u4"><span>⟦ (30-50)% chance for </span><span data-tooltip-trigger="true">Spell</span><span> Skills to fire 2 additional </span><span data-tooltip-trigger="true">Projectiles</span><span> ⟧</span></div>
+  <div class="line" id="u5"><span data-tooltip-trigger="true">Physical</span><span> Damage: (140-208)-(210-311)</span></div>
+  <div class="line" id="u6"><span data-tooltip-trigger="true">Elemental</span><span> Damage: 9-15, 13-16, (1-2)-(200-331)</span></div>
+  <div class="line" id="u7"><span>Kalguuran </span><span data-tooltip-trigger="true">Two Hand Mace</span></div>
+  <div class="line" id="u8"><span>DPS: </span><span>423-634</span><span> (245-363p / 178-270e)</span></div>
+  <!-- 第十二輪(2026-09-04 六張截圖):負數範圍、模板字面 +{0}、無編號 {}、.csd 區塊空白行 -->
+  <div class="line" id="v1"><span>⟦ (-10-10) to Maximum </span><span data-tooltip-trigger="true">Rage</span><span> ⟧</span></div>
+  <div class="line" id="v2"><span>Right ring slot: </span><span data-tooltip-trigger="true">Projectiles</span><span> from </span><span data-tooltip-trigger="true">Spells</span><span> </span><span data-tooltip-trigger="true">Chain</span><span> +1 times</span></div>
+  <div class="line" id="v3">Cannot be used with Trials below level 80</div>
+  <div class="line" id="v4"><span>Regenerate (2.5-4.9)% of maximum </span><span data-tooltip-trigger="true">Runic Ward</span><span> per second during Effect</span></div>
+  <div class="line" id="v5"><span>Gain </span><span data-tooltip-trigger="true">Guard</span><span> equal to Current </span><span data-tooltip-trigger="true">Runic Ward</span><span> for 10 seconds when Effect ends</span></div>
+  <!-- 藥劑屬性行真實 DOM(奧爾羅斯的決心):每個字各自 <span><span>字</span> </span> -->
+  <div class="property" id="w1"><span><span>Recovers</span> </span><span><span>(920-1104)</span> </span><span><span>Life</span> </span><span><span>over</span> </span><span><span>3</span> </span><span><span>Seconds</span> </span></div>
+  <div class="property" id="w2"><span><span>Consumes</span> </span><span><span>(20-25)</span> </span><span><span>of</span> </span><span><span>75</span> </span><span><span>Charges</span> </span><span><span>on</span> </span><span><span>use</span> </span></div>
+  <div class="line" id="v6"><span>⟦ </span><span data-tooltip-trigger="true">Breaches</span><span> in Map have (1-10)% increased Monster density ⟧</span></div>
+  <div class="line whitespace-pre-line" id="s5"><span>Boots, Gloves, Helmet or </span><span data-tooltip-trigger="true">Jewellery</span><span>: (6-10)% increased </span><span data-tooltip-trigger="true">Rarity</span><span> of Items found</span></div>
+
   <!-- sentinel:確認引擎已初始化(Energy Shield→能量護盾) -->
   <div id="sentinel">Energy Shield</div>
 </body>`;
@@ -168,7 +208,7 @@ const CHECKS = [
   { id: 't24', must: '冰冷傷害', noEng: true, desc: '圖29 雙範圍 Adds (156-199) to (352-400) Cold Damage' },
   { id: 't25', must: '終焉烈焰', noEng: true, desc: '圖33 遺物名 The Last Flame' },
   { id: 't26', must: '天堂異象', noEng: true, desc: '圖34 碑牌名 Visions of Paradise' },
-  { id: 't27', must: '回復', noEng: true, desc: '圖35 藥劑 Recovers (920-1104) Life over 3 Seconds' },
+  { id: 't27', must: '恢復', noEng: true, desc: '圖35 藥劑 Recovers (920-1104) Life over 3 Seconds(官方 4.5.4 起用「恢復」)' },
   { id: 't28', must: '充能', noEng: true, desc: '圖35 藥劑 Consumes (20-25) of 75 Charges on use' },
   { id: 't29', must: '胸甲（命定）', noEng: true, desc: '圖38 魔像 Body Armour (Bonded): …' },
   { id: 't30', must: '此技能會複製', noEng: true, desc: '圖39 ClientStrings 自動長句 This Skill will copy…' },
@@ -185,6 +225,39 @@ const CHECKS = [
   { id: 'g8', must: '範圍內小型天賦也會賦予', noEng: true, desc: '圖8 巢狀:Small…grant 3% increased Cast Speed' },
   { id: 'g9', must: '範圍異能魔力內的天賦可以在沒有連結你的天賦樹下被配置', noEng: true, desc: '圖9 從無到有 of Eldritch Battery' },
   { id: 'g10', must: '範圍先祖魂約內的天賦可以在沒有連結你的天賦樹下被配置', noEng: true, desc: '圖12 從無到有 of Ancestral Bond' },
+  // 冰霜之捷 tooltip
+  { id: 'h1', must: '爆炸', noEng: true, desc: '寶石分頁標題 Explosion(GrantedEffectLabels)' },
+  { id: 'h1b', must: '增益效果', noEng: true, desc: '寶石分頁標題 Buff' },
+  { id: 'h2', must: '爆炸物理傷害轉換為冰冷傷害', noEng: true, desc: '多行模板 pre-line "\\n"(關鍵字 span 觸發器)' },
+  { id: 'h3', must: '爆炸物理傷害轉換為冰冷傷害', noEng: true, desc: '多行模板 <br> 換行' },
+  { id: 'h4', must: '不能被閃避', noEng: true, desc: "Can't be Evaded(關鍵字 span)" },
+  { id: 'h5', must: '被你粉碎的敵人會爆炸', noEng: true, desc: 'Enemies you Shatter explode' },
+  // 精髓單品頁
+  { id: 's1', must: '單手近戰武器或弓：', noEng: true, desc: '精髓 One Handed Melee Weapon or Bow: Gain (15-20)%…(組合前綴)' },
+  { id: 's2', must: '雙手近戰武器或十字弓：', noEng: true, desc: '精髓 Two Handed Melee Weapon or Crossbow: …(前綴 35 字)' },
+  { id: 's3', must: '交換', noEng: true, desc: '站方 UI Exchange' },
+  { id: 's4', must: '價格歷史', noEng: true, desc: '站方 UI Price history' },
+  { id: 's5', must: '鞋子、手套、頭盔或飾品：', noEng: true, desc: '精髓 Boots, Gloves, Helmet or Jewellery: …(逗號清單前綴)' },
+  { id: 's6', must: '飾品：+20%最大品質', noEng: true, desc: '裂痕精髓 Jewellery: +20% to Maximum Quality(GGG 寫死句,poe2db 對照)' },
+  { id: 's7', must: '胸甲：分配一個隨機核心天賦', noEng: true, desc: '譫妄精髓 Body Armour: Allocates a random Notable Passive Skill' },
+  // 傳奇武器頁
+  { id: 'u1', must: '艾茲麥法杖', noEng: true, desc: '類別行 Ezomyte Wand(文化前綴 + 類別 span)' },
+  { id: 'u2', must: '最大符文保護', noEng: true, desc: '⟦ +300 to maximum Runic Ward ⟧(關鍵字 span)' },
+  { id: 'u3', must: '魔力回復率', noEng: true, desc: '⟦ (30-50)% increased Mana Regeneration Rate ⟧(單節點)' },
+  { id: 'u4', must: '投射物', noEng: true, desc: '⟦ (30-50)% chance for Spell Skills to fire 2 additional Projectiles ⟧' },
+  { id: 'u5', must: '物理傷害：(140-208)-(210-311)', noEng: true, desc: '屬性行 Physical Damage: (140-208)-(210-311)(標籤拆 span)' },
+  { id: 'u6', must: '元素傷害：9-15, 13-16, (1-2)-(200-331)', noEng: true, desc: '屬性行 Elemental Damage: …' },
+  { id: 'u7', must: '卡爾葛', noEng: true, desc: '類別行 Kalguuran Two Hand Mace' },
+  { id: 'u8', must: '每秒傷害', desc: 'DPS: 423-634 (245-363p / 178-270e)(ClientStrings 官方 DPS→每秒傷害;p/e 為站方縮寫保留)' },
+  // 六張截圖
+  { id: 'v1', must: '層最大盛怒', noEng: true, desc: '怨恨鍛造 ⟦ (-10-10) to Maximum Rage ⟧(負數範圍)' },
+  { id: 'v2', must: '右手戒指欄位：', noEng: true, desc: '蛇巢 Right ring slot: Projectiles from Spells Chain +1 times(模板字面 +{0})' },
+  { id: 'v3', must: '試煉', noEng: true, desc: '終焉烈焰 Cannot be used with Trials below level 80(.csd 無編號 {})' },
+  { id: 'v4', must: '符文保護', noEng: true, desc: '奧爾羅斯的決心 Regenerate … Runic Ward per second during Effect(.csd 區塊空白行)' },
+  { id: 'v5', must: '守護', noEng: true, desc: '奧爾羅斯的決心 Gain Guard equal to Current Runic Ward …' },
+  { id: 'w1', must: '恢復', noEng: true, desc: '藥劑屬性行 Recovers (920-1104) Life over 3 Seconds(每字各自巢狀 span)' },
+  { id: 'w2', must: '充能', noEng: true, desc: '藥劑屬性行 Consumes (20-25) of 75 Charges on use(每字各自巢狀 span)' },
+  { id: 'v6', must: '怪物密度', noEng: true, desc: '裂痕碑牌 Breaches in Map have (1-10)% increased Monster density(站方改寫句 → 同 stat 官方繁中)' },
 ];
 
 (async () => {

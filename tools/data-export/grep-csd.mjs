@@ -1,13 +1,20 @@
-// grep-csd.mjs — 在所有 .csd 中尋找含關鍵字的 description 區塊(調查用)
+// grep-csd.mjs — 在所有詞綴描述檔中尋找含關鍵字的 description 區塊(調查用)
+// PoE1:metadata/statdescriptions/**/*.txt(UTF-16LE)。
+// 用法:node grep-csd.mjs <關鍵字…>   patch 取 PATCH 環境變數,否則讀 config.json
 import * as loaders from './node_modules/pathofexile-dat/dist/cli/bundle-loaders.js';
 import { readIndexBundle } from './node_modules/pathofexile-dat/dist/bundles/index-bundle.js';
 import { getDirContent } from './node_modules/pathofexile-dat/dist/bundles/index-paths.js';
 import { decompressSliceInBundle, decompressedBundleSize } from './node_modules/pathofexile-dat/dist/bundles/bundle.js';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const PATCH = process.env.POE2_PATCH || '4.5.1.1.2';
-const STAT_DIR = 'data/statdescriptions';
-const NEEDLE = process.argv[2] || 'Allocates';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const PATCH = process.env.PATCH || JSON.parse(readFileSync(path.join(here, 'config.json'), 'utf8')).patch;
+const STAT_DIR = 'metadata/statdescriptions';
+const STAT_EXT = '.txt';
+const NEEDLES = process.argv.slice(2).map((s) => s.toLowerCase());
+if (!NEEDLES.length) { console.error('用法:node grep-csd.mjs <關鍵字…>'); process.exit(1); }
 
 async function listCsdFiles(cdn) {
   const indexBin = await cdn.fetchFile('_.index.bin');
@@ -20,32 +27,25 @@ async function listCsdFiles(cdn) {
   const visit = (dir) => {
     let c;
     try { c = getDirContent(dir, pr, idx.dirsInfo); } catch { return; }
-    for (const f of c.files) if (f.endsWith('.csd')) out.push(f);
+    for (const f of c.files) if (f.endsWith(STAT_EXT)) out.push(f);
     for (const d of c.dirs) visit(d);
   };
   visit(STAT_DIR);
   return out.sort();
 }
 
-const cdn = await loaders.CdnBundleLoader.create(path.join(process.cwd(), '.cache'), PATCH);
+const origLog = console.log;
+console.log = (...a) => { if (!/^Loading/.test(String(a[0]))) origLog(...a); };
+const cdn = await loaders.CdnBundleLoader.create(path.join(here, '.cache'), PATCH);
 const loader = await loaders.FileLoader.create(cdn);
 const files = await listCsdFiles(cdn);
+console.log(`patch ${PATCH}:${files.length} 個描述檔`);
 for (const f of files) {
   const data = await loader.tryGetFileContents(f);
   if (!data) continue;
-  const text = Buffer.from(data).toString('utf16le');
-  if (!text.includes(NEEDLE)) continue;
-  const lines = text.split(/\r?\n/);
-  // 找出含 needle 的行,印出所屬 description 區塊(往上找 'description',往下印到下一個 'description')
-  for (let i = 0; i < lines.length; i++) {
-    if (!lines[i].includes(NEEDLE)) continue;
-    let start = i;
-    while (start > 0 && lines[start].trim() !== 'description') start--;
-    let end = i;
-    while (end < lines.length - 1 && lines[end + 1].trim() !== 'description') end++;
-    if (end - start > 80) { start = i - 2; end = i + 2; }
-    console.log(`\n=== ${f} (line ${i}) ===`);
-    for (let k = start; k <= end; k++) console.log(lines[k]);
-    i = end;
-  }
+  const lines = Buffer.from(data).toString('utf16le').split(/\r?\n/);
+  lines.forEach((l, i) => {
+    const low = l.toLowerCase();
+    if (NEEDLES.some((n) => low.includes(n))) console.log(`${f.replace(STAT_DIR + '/', '')}:${i + 1}: ${l.trim().slice(0, 200)}`);
+  });
 }

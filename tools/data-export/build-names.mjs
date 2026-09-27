@@ -16,7 +16,9 @@ const dictPath = path.join(here, '..', '..', 'data', 'dict.json');
 // Quest/WorldAreas/AlternatePassiveSkills。皆以 Id join、取 Name 欄,屬專有名詞 → 併入
 // names(長者走多字子字串、短者走整節點精確比對)。ActiveSkills/Words/UniqueStashLayout
 // 有特殊列序/join 邏輯,於下方各自特例處理。
-const TABLES = entriesFor('name').map((e) => e.table);
+// 欄名依 relevance 的 columns(兩代欄名可能不同,如 GemTags:PoE2 Name、PoE1 Tag);
+// 表裡沒有的欄自動略過。columns 未列時預設 Name。
+const TABLES = entriesFor('name').map((e) => ({ table: e.table, cols: Array.isArray(e.columns) ? e.columns : ['Name'] }));
 const isCJK = (s) => /[㐀-鿿豈-﫿]/.test(s);
 // 英文側:濾掉空/DNT/markup/單字噪音(length<2)。
 const bad = (s) => !s || /^\[DNT\]|\bDNT\b|^<.*>$/.test(s) || s.length < 2;
@@ -30,6 +32,7 @@ function loadJoin(table, col = 'Name') {
   const tw = JSON.parse(readFileSync(path.join(here, 'tables', 'Traditional Chinese', table + '.json'), 'utf8'));
   const twById = new Map(tw.map((r) => [r.Id, r[col]]));
   const out = {};
+  if (!en.length || !(col in en[0])) return out;
   for (const r of en) {
     const enName = stripRefs(r[col]);
     const zhName = stripRefs(twById.get(r.Id));
@@ -44,8 +47,9 @@ function loadJoin(table, col = 'Name') {
 const dict = JSON.parse(readFileSync(dictPath, 'utf8'));
 const names = dict.names || {};
 let added = 0;
-for (const table of TABLES) {
-  const m = loadJoin(table);
+for (const { table, cols } of TABLES) {
+  const m = {};
+  for (const c of cols) for (const [k, v] of Object.entries(loadJoin(table, c))) if (!(k in m)) m[k] = v;
   let a = 0;
   for (const [en, zh] of Object.entries(m)) {
     if (!(en in names)) { names[en] = zh; a++; }
@@ -73,6 +77,36 @@ for (const table of TABLES) {
   }
   added += a;
   console.log(`ActiveSkills.DisplayedName(技能名,列序對齊): 可用 ${avail} 筆，新增 ${a} 筆`);
+}
+
+// 野獸名(poe.ninja 經濟 Beasts 分類):MonsterVarieties 全表上萬列、多是一般怪物,整表收會讓
+// 多字子字串比對誤翻 → 只收「可捕捉/可交易的獸」所在路徑(魔獸寓言 LeagueBestiary、豐收
+// LeagueHarvest、艾茲麥 LeagueAzmeri)。依資料路徑篩選,新聯盟加獸自動跟上;Id join(Id 不唯一時取首見)。
+{
+  const BEAST_PATH = /^Metadata\/Monsters\/(LeagueBestiary|LeagueHarvest|LeagueAzmeri)\//;
+  try {
+    const en = JSON.parse(readFileSync(path.join(here, 'tables', 'English', 'MonsterVarieties.json'), 'utf8'));
+    const tw = JSON.parse(readFileSync(path.join(here, 'tables', 'Traditional Chinese', 'MonsterVarieties.json'), 'utf8'));
+    const twById = new Map();
+    for (const r of tw) if (r.Id && !twById.has(r.Id)) twById.set(r.Id, r.Name);
+    let a = 0;
+    let avail = 0;
+    const seen = new Set();
+    for (const r of en) {
+      if (!BEAST_PATH.test(r.Id || '')) continue;
+      const enName = stripRefs(r.Name);
+      const zhName = stripRefs(twById.get(r.Id));
+      if (seen.has(enName) || bad(enName) || !zhName || badZh(zhName) || enName === zhName) continue;
+      if (isCJK(enName) || !isCJK(zhName)) continue;
+      seen.add(enName);
+      avail++;
+      if (!(enName in names)) { names[enName] = zhName; a++; }
+    }
+    added += a;
+    console.log(`MonsterVarieties(野獸,限 Bestiary/Harvest/Azmeri 路徑): 可用 ${avail} 筆，新增 ${a} 筆`);
+  } catch (e) {
+    console.warn('skip MonsterVarieties', e.message);
+  }
 }
 
 // 傳奇物品名:UniqueStashLayout.WordsKey 精確指向 Words 的「傳奇列」,

@@ -22,7 +22,8 @@ const version = createHash('sha256')
     '|' + JSON.stringify(dict.uiAuto) + '|' + JSON.stringify(stats.templates) +
     // textTemplates 必須入雜湊:否則只改文字佔位符模板時 version 不變,
     // background 會判定「已是最新」而不下載,用戶端永遠拿不到更新。
-    '|' + JSON.stringify(stats.textTemplates || [])
+    '|' + JSON.stringify(stats.textTemplates || []) +
+    '|' + JSON.stringify(dict.essenceMods || {})
   )
   .digest('hex')
   .slice(0, 16);

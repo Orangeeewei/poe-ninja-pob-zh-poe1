@@ -4,11 +4,19 @@
  *
  * 純唯讀分析,不寫任何成品檔。供決定動態 harvester 要納入什麼用。
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { ROUTED, SPECIAL_TABLES } from './relevance.mjs';
 
 const here = process.cwd();
+
+// --out <檔案>:把報告同時寫成 markdown(CI 用;人看 repo 的 diff 就知道有沒有新欄位要對接)
+const OUT = (() => { const i = process.argv.indexOf('--out'); return i !== -1 ? process.argv[i + 1] : null; })();
+const outBuf = [];
+if (OUT) {
+  const orig = console.log;
+  console.log = (...a) => { const s = a.join(' '); outBuf.push(s); orig(s); };
+}
 const enDir = path.join(here, 'tables', 'English');
 const twDir = path.join(here, 'tables', 'Traditional Chinese');
 
@@ -96,3 +104,14 @@ for (const r of NEW.filter((r) => r.shortUi >= r.loc * 0.5 && r.shortUi >= 5)) {
 console.log(`\n=== 總計未對接句子型欄位的可譯句數合計 ===`);
 const sentSum = NEW.filter((r) => r.sentence >= 5).reduce((a, r) => a + r.sentence, 0);
 console.log(`未對接欄位的「句子」可譯數合計約 ${sentSum}`);
+
+if (OUT) {
+  const patch = process.env.PATCH || process.env.POE2_PATCH || '';
+  writeFileSync(OUT,
+    '# 官方繁中欄位對接稽核\n\n' +
+    `patch:${patch || '(未知)'}\n\n` +
+    '由 CI 每日自動產生(`audit-coverage.mjs --out`)。「未對接」= 該欄有官方繁中但 `relevance.mjs` 尚未路由;\n' +
+    '若某欄的內容 poe.ninja 會顯示,把它加進 `relevance.mjs` 的 ROUTED 即可,下次 build 自動納入。\n\n' +
+    '```\n' + outBuf.join('\n') + '\n```\n', 'utf8');
+  console.log(`報告已寫入 ${OUT}`);
+}

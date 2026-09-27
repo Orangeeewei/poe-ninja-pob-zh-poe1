@@ -144,7 +144,7 @@ const check = (name, cond, got) => {
   check('相對時間 5 minutes ago', txt('p1') === '5 分鐘前', txt('p1'));
   check('寶石等級來源 (Max)', txt('p2') === '來自寶石 20 等（上限）', txt('p2'));
   check('污染等級 +1', txt('p3') === '來自污染 +1 等', txt('p3'));
-  check('(trigger) 標籤', txt('p4') === '(觸發)', txt('p4'));
+  check('(trigger) 標籤', txt('p4') === '（觸發）', txt('p4'));
   check('Ward 單位', txt('p5') === '26 保護', txt('p5'));
 
   // 4) 切英文:全部可逆(含骨架行、屬性)

@@ -61,6 +61,7 @@ function sweepTable(map, name, columns) {
       const z = norm(t.tw[i][col]);
       if (!e || !z || e === z) continue;
       if (!hasLetter(e) || !isCJK(z)) continue;
+      if (/\[DNT|\bDNT\b/i.test(e) || /\[DNT|\bDNT\b/i.test(z)) continue; // 內部「Do Not Translate」標記列
       if (e.length < 1 || e.length > UI_MAXLEN) continue;        // 超過 → 句子,留給 descriptions
       if (/[{}<>]/.test(e) || /[{}<>]/.test(z)) continue;        // 含佔位符/標記 → 不是純 UI 標籤
       const key = e.toLowerCase();
@@ -134,9 +135,35 @@ function mineRefs(map, name, columns) {
   return n;
 }
 
+// ClientStrings 精選(依 Id 前綴,非整表):精髓/符文「物品類型限制」前綴與武器類別顯示名
+// (EssenceCategory* → Two Handed Melee Weapon→雙手近戰武器;WeaponClassDisplayName* → Crossbow→十字弓)。
+// 遊戲術語、Id 明確,且引擎只用於「前綴: 詞綴」與整節點精確比對 → 安全;整表仍不收(噪音)。
+const CS_ID_PREFIXES = ['EssenceCategory', 'WeaponClassDisplayName'];
+function sweepClientStringsByIdPrefix(map) {
+  const t = loadTable('ClientStrings');
+  if (!t) return 0;
+  const twById = new Map(t.tw.map((r) => [r.Id, r.Text]));
+  let n = 0;
+  for (const r of t.en) {
+    const id = String(r.Id || '');
+    if (!CS_ID_PREFIXES.some((p) => id.startsWith(p))) continue;
+    const e = norm(r.Text);
+    const z = norm(twById.get(id));
+    if (!e || !z || e === z || !hasLetter(e) || !isCJK(z)) continue;
+    if (/[{}<>]/.test(e) || e.length > UI_MAXLEN) continue;
+    const key = e.toLowerCase();
+    if (UI_GENERIC_DENY.has(key) || key in map) continue;
+    map[key] = z;
+    n++;
+  }
+  console.log(`ClientStrings(Id 前綴 ${CS_ID_PREFIXES.join('/')}): 新增 ${n}`);
+  return n;
+}
+
 const ui = {};
 const uiUnval = {};  // §12:auto-detected(unvalidated)獨立區塊
 for (const { table, columns, auto } of entriesFor('ui')) sweepTable(auto ? uiUnval : ui, table, columns);
+sweepClientStringsByIdPrefix(ui);
 // ⚠️ ClientStrings(遊戲介面字串大表)仍不進 uiAuto:含大量泛用英文字 + 噪音,
 //    整節點比對也會在 poe.ninja 亂翻。其「長句」走 build-descriptions 自動規則(安全)。
 // 參照對挖掘:欄位掃描之後才跑(欄位來源為準,挖掘只補新 key);只挖人工驗證過的表。

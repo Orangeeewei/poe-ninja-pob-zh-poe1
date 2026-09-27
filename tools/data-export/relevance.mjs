@@ -50,14 +50,18 @@ export const ROUTED = [
   { table: 'KeywordPopups', route: 'ui', columns: ['Term'] },  // 關鍵字名詞(Physical Damage→物理傷害)
   { table: 'Ascendancy', route: 'ui', columns: ['Name'] },     // 昇華職業名(Deadeye→銳眼)
   { table: 'CharacterPanelStats', route: 'ui', columns: '*' }, // 角色面板標籤(Life→生命)
+  { table: 'GrantedEffectLabels', route: 'ui', columns: ['Text'] },
+  { table: 'CurrencyExchangeCategories', route: 'ui', columns: ['Name'] }, // 通貨兌換分類(poe.ninja 經濟頁分類:Delirium Orbs→譫妄玉、Allflame Embers→不滅之火餘燼) // 寶石 tooltip 分頁/段落標題(Explosion→爆炸、Buff→增益效果;API gemTabs[].pages[].skillName)
 
   // ---- names(專有名詞,保守,因多字名走子字串比對有誤判風險)----
   { table: 'BaseItemTypes', route: 'name', columns: ['Name'] },        // 底材名
   { table: 'PassiveSkills', route: 'name', columns: ['Name'] },        // 天賦名
-  { table: 'GemTags', route: 'name', columns: ['Name'] },              // 寶石標籤
+  { table: 'GemTags', route: 'name', columns: ['Name', 'Tag'] },       // 寶石標籤(PoE2 欄名 Name、PoE1 欄名 Tag)
   { table: 'Quest', route: 'name', columns: ['Name'] },                // 任務名
   { table: 'WorldAreas', route: 'name', columns: ['Name'] },           // 地區名
   { table: 'AlternatePassiveSkills', route: 'name', columns: ['Name'] },// 昇華/替代天賦名
+  { table: 'GemEffects', route: 'name', columns: ['SupportName'] },    // 輔助寶石名(PoE1 新輔助多半只在這欄:Autoexertion Support→自動竭盡輔助)
+  { table: 'IncursionRooms', route: 'name', columns: ['Name'] },       // 神殿房間名(Apex of Ascension→祭祀之巔)
 ];
 
 // 特殊 join/列序邏輯的表(build-names.mjs 內特例處理),但匯出仍需要它們。
@@ -66,6 +70,7 @@ export const SPECIAL_TABLES = {
   Words: ['Text', 'Text2'],            // 傳奇名(多字 Text2)
   UniqueStashLayout: ['WordsKey'],     // 傳奇分頁 → Words 列索引(join 鍵,非 string)
   ClientStrings: ['Text'],             // 自動長句規則(desc)+ 藥劑/護符模板(stats)
+  MonsterVarieties: ['Id', 'Name'],    // 野獸名(限 LeagueBestiary/Harvest/Azmeri 路徑;build-names 特例)
 };
 
 // uiAuto 整節點精確比對的長度上限(超過視為句子,改走 desc;避免 lore 句進 ui)。
@@ -80,6 +85,12 @@ export const UI_GENERIC_DENY = new Set([
   'reflection', 'punishment', 'discipline', 'immunity', 'converted', 'spectral',
   // poe.ninja 站方 UI 自身會出現的字(Meta 流行度、Gain 漲幅欄)→ 遊戲詞義會亂翻
   'meta', 'gain', 'gains',
+  // GrantedEffectLabels 的內部顯示旗標(Hidden/Shown)→ 非玩家可見標題,且在站方 UI 可能單獨出現
+  'hidden', 'shown',
+  // PoE1:BuffDefinitions 的增益名與傳奇/技能/天賦名撞字,ui 路由整節點比對又排在名稱前 →
+  // 物品名會被蓋成增益名(Headhunter 獵首→獵頭者、Fire→火烤蜘蛛！、Death→我要活下去)。
+  // 這些字交回 names 路由(官方物品/技能名)。
+  'fire', 'death', 'headhunter', 'incinerate', 'gluttony', 'executioner', 'lethality',
 ]);
 
 // ---- §12 L1 自動偵測(auto-relevance)----

@@ -3,28 +3,34 @@
  *
  * 產出:dist/poe-ninja-pob-zh-<version>.zip,內容物在 zip 根目錄(manifest.json 在最上層)。
  * 只含:manifest.json、background.js、translator.js、search-inject.js、data/*.json、icons/*.png。
- * 不含:tools/、.github/、README、docs、CLAUDE.md、HANDOFF、node_modules、.git…
+ * 不含:tools/、.github/、README、docs、本機工作筆記(HANDOFF 等)、node_modules、.git…
  *
  * 自帶 ZIP 寫入器(deflate + 正斜線路徑),不依賴外部 zip/PowerShell → 跨平台、
  * 且避免 PowerShell Compress-Archive 反斜線路徑被 Chrome 商店拒收的問題。
  *
- * 用法:node tools/pack-extension.mjs
+ * 用法:node tools/pack-extension.mjs [--root <原始碼目錄>] [--out <輸出目錄>]
+ *   --root:打包別的檢出(如舊版 tag 的 worktree;回填 Release 用),預設本 repo
+ *   --out :zip 輸出目錄,預設 <root>/dist
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { deflateRawSync } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const argOf = (name) => { const i = process.argv.indexOf(name); return i !== -1 ? path.resolve(process.argv[i + 1]) : null; };
+const root = argOf('--root') || path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const manifest = JSON.parse(readFileSync(path.join(root, 'manifest.json'), 'utf8'));
 const version = manifest.version;
-const distDir = path.join(root, 'dist');
-const zipName = `poe-ninja-pob-zh-${version}.zip`;
+const distDir = argOf('--out') || path.join(root, 'dist');
+const zipName = `poe-ninja-pob-zh-poe1-${version}.zip`;
 
 // 收集要打包的檔(zip 內路徑一律正斜線、相對根目錄)
 const files = [];
 const addFile = (zipPath, absPath) => files.push({ zipPath, data: readFileSync(absPath) });
-for (const f of ['manifest.json', 'background.js', 'translator.js', 'search-inject.js']) addFile(f, path.join(root, f));
+// search-inject.js 是 2.3.0 才加的;打包舊版檢出時不存在 → 有才收
+for (const f of ['manifest.json', 'background.js', 'translator.js', 'search-inject.js']) {
+  if (existsSync(path.join(root, f))) addFile(f, path.join(root, f));
+}
 for (const f of readdirSync(path.join(root, 'data')).sort()) {
   if (f.endsWith('.json')) addFile(`data/${f}`, path.join(root, 'data', f));
 }
@@ -110,6 +116,6 @@ const zip = Buffer.concat([...localParts, cd, eocd]);
 mkdirSync(distDir, { recursive: true });
 writeFileSync(path.join(distDir, zipName), zip);
 
-console.log(`✅ 打包完成 -> dist/${zipName}(${files.length} 檔,${(zip.length / 1048576).toFixed(2)} MB)`);
+console.log(`✅ 打包完成 -> ${path.relative(process.cwd(), path.join(distDir, zipName)) || zipName}(${files.length} 檔,${(zip.length / 1048576).toFixed(2)} MB)`);
 for (const f of files) console.log('   - ' + f.zipPath);
 console.log('上傳到 https://chrome.google.com/webstore/devconsole(文案見 docs/STORE-LISTING.md)');

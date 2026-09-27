@@ -38,6 +38,20 @@
     'Path of Building', 'Grinding Gear Games', 'GGG',
   ]);
 
+  // 收進未翻譯收集器(節點層與整行層共用)。過濾:CSS/標記類字串、品牌名、保留英文的
+  // 名稱(整行或片段)、玩家帳號(含 #/_/@)、純羅馬數字(II/III 武器組編號)。
+  function addMiss(s, node) {
+    if (misses.size >= MISS_CAP || s.length > 200 || !/[A-Za-z]{2,}/.test(s)) return;
+    if (/[{}<>;]/.test(s) || /^[.#]/.test(s) || /[#_@]/.test(s) || /^[IVXLCDM]+$/.test(s)) return;
+    if (KEEP_ENGLISH.has(s) || (keepNames && keepNames.has(s))) return;
+    if (node && inKeptName(node)) return;
+    misses.add(s);
+  }
+  // 整行合併失敗的候選行:走完節點層後若該行仍殘留英文,才把「整行原文」收進收集器。
+  // (整行失敗時關鍵字 span 常各自被翻成中文,節點層只收到零碎片段如「of Explosion」;
+  //  真正能餵回資料管線的是整行英文,例「100% of Explosion Physical Damage Converted to Cold Damage」。)
+  const lineMissCands = [];
+
   // 設定文字節點值:首次先保存原文(供切回英文還原),並記回音標記。
   function setNodeValue(node, val) {
     if (node.__pobOrig === undefined) node.__pobOrig = node.nodeValue;
@@ -53,8 +67,10 @@
   let multiWordLookup = null;// 小寫多字名 -> 中文
   let multiWordFirst = null; // 多字名稱「首詞」集合(便宜預過濾,免得每個節點都跑大 regex)
   let statTemplates = null;  // 詞綴模板:bucketKey -> [{en, zh}]
+  let statTemplatesLower = null; // 同上但 key 小寫:精確桶落空時的後備(GGG 站方/伺服器字串偶有大小寫差異,如 Rate/rate)
   let textStats = null;      // 含文字佔位符(技能名等)的模板:已預編 {re, order, zh}
   let descMap = null;        // 整句描述:正規化英文 -> 中文
+  let extraMap = null;       // 精確整句(poe2db 精髓詞綴等,官方 .csd 沒有的寫死句):整句精確比對,先於模板
   const statRegexCache = new Map();
 
   // 屬性縮寫(poe.ninja 物品需求:"121 Int" / "+5 Str")→ 官方全名
@@ -98,7 +114,8 @@
   // 故數值樣式要同時認:① 括號範圍 (N-N) / +(N-N) ② 一般單一數字。
   // 範圍分支放前面(較長優先),整個 (N-N) 視為單一佔位符值,才能對上模板 {0}。
   const NUM_PLAIN = '[+-]?\\d+(?:[.,]\\d+)*';
-  const STAT_NUM = '[+-]?\\((?:\\d+(?:[.,]\\d+)*)-(?:\\d+(?:[.,]\\d+)*)\\)|' + NUM_PLAIN;
+  // 範圍內的數字可帶正負號:傳奇「(-10-10) to Maximum Rage」(怨恨鍛造)
+  const STAT_NUM = '[+-]?\\([+-]?(?:\\d+(?:[.,]\\d+)*)-[+-]?(?:\\d+(?:[.,]\\d+)*)\\)|' + NUM_PLAIN;
   const statNumRe = new RegExp(STAT_NUM, 'g');
   const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -109,11 +126,24 @@
     // 新傳奇/新底材常不在舊資料表 → 先手工列入避免片段亂翻;等官方繁中入字典後 nameMap 優先。
     keepNames = new Set([...(dict && dict.keepNames || []), ...(ui && ui.keepEnglish || [])]);
     statTemplates = (stats && stats.templates) || null;
+    statTemplatesLower = null;
+    if (statTemplates) {
+      statTemplatesLower = new Map();
+      for (const [k, v] of Object.entries(statTemplates)) {
+        const l = k.toLowerCase();
+        const arr = statTemplatesLower.get(l);
+        if (arr) arr.push(...v); else statTemplatesLower.set(l, v.slice());
+      }
+    }
     // 含文字佔位符的模板(如「+{0} to Level of all {1} Skills」,{1}=技能名)→ 預編 regex。
     textStats = compileTextStats((stats && stats.textTemplates) || []);
     descMap = new Map();
     for (const [en, zh] of Object.entries((dict && dict.descriptions) || {})) {
       descMap.set(en.replace(/\s+/g, ' ').trim(), zh);
+    }
+    extraMap = new Map();
+    for (const [en, zh] of Object.entries((dict && dict.essenceMods) || {})) {
+      extraMap.set(en.replace(/\s+/g, ' ').trim(), zh);
     }
     uiMap = new Map();
     // 先放自動產生的 UI 字典(物品類別/職業名等,來自官方表),
@@ -163,8 +193,9 @@
 
   // 把英文模板(含 {N})編成 { re, order }:逐段 escape 字面、{N} 換成數字捕獲。
   // 逐段處理可保留模板中的「字面數字」(例如 "for 6 seconds") 不被當成佔位符。
-  function compileStat(en) {
-    let cached = statRegexCache.get(en);
+  function compileStat(en, ci) {
+    const cacheKey = ci ? 'i:' + en : en;
+    let cached = statRegexCache.get(cacheKey);
     if (cached !== undefined) return cached;
     let pattern = '';
     let last = 0;
@@ -178,9 +209,9 @@
     }
     pattern += escapeRe(en.slice(last));
     let re = null;
-    try { re = new RegExp('^' + pattern + '$'); } catch (e) { re = null; }
+    try { re = new RegExp('^' + pattern + '$', ci ? 'i' : ''); } catch (e) { re = null; }
     cached = re ? { re, order } : null;
-    statRegexCache.set(en, cached);
+    statRegexCache.set(cacheKey, cached);
     return cached;
   }
 
@@ -247,15 +278,23 @@
     if (!statTemplates) return null;
     statNumRe.lastIndex = 0;
     const key = line.replace(statNumRe, '{}');
-    const cands = statTemplates[key];
-    if (cands) {
+    // 模板字面「+{0}」(蛇巢「Right ring slot: Projectiles from Spells Chain +{0} times」):數字的正號屬於
+    // 模板而非數值 → 第二把 key 保留正號再試(桶 key 是 build 把 {N} 換成 {} 而來,字面 + 會留在 key 裡)
+    statNumRe.lastIndex = 0;
+    const keyPlus = line.replace(statNumRe, (mm) => (mm[0] === '+' ? '+{}' : '{}'));
+    const keys = keyPlus === key ? [key] : [key, keyPlus];
+    for (const k of keys) {
+      let cands = statTemplates[k];
+      let ci = false;
+      if (!cands && statTemplatesLower) { cands = statTemplatesLower.get(k.toLowerCase()); ci = !!cands; }
+      if (!cands) continue;
       for (const cand of cands) {
-        const c = compileStat(cand.en);
+        const c = compileStat(cand.en, ci);
         if (!c) continue;
         const mt = line.match(c.re);
         if (!mt) continue;
         const values = {};
-        c.order.forEach((idx, k) => { values[idx] = mt[k + 1]; });
+        c.order.forEach((idx, kk) => { values[idx] = mt[kk + 1]; });
         const zh = cand.zh.replace(/\{(\d+)\}/g, (_, idx) => (idx in values ? values[idx] : '{' + idx + '}'));
         return panguSpace(zh);
       }
@@ -277,22 +316,196 @@
     }
     const s = translateStat(norm);
     if (s) return s;
-    const m = norm.match(/^(.{1,30}?):\s+(.+)$/);
+    // 前綴上限 48 字:精髓「Two Handed Melee Weapon or Crossbow: …」有 35 字,舊上限 30 會整行落空
+    const m = norm.match(/^(.{1,48}?):\s+(.+)$/);
     if (m) {
-      const stat = translateStat(m[2]);
-      if (stat) {
-        const prefix = RUNE_PREFIX[m[1].toLowerCase()] || (uiMap && uiMap.get(m[1].toLowerCase())) || m[1];
-        return prefix + '：' + stat;
+      // 詞綴部分:精確句(poe2db 精髓詞綴)先於模板 —— 腐化精髓「Allocates a random Notable Passive Skill」
+      // 會被文字佔位符模板「Allocates {0}」半命中成「配置 a random …」;「+20% to Maximum Quality」則是
+      // GGG 寫死句、.csd 根本沒有。前綴仍走 translatePrefix(官方類別名),格式與其他行一致。
+      const stat = (extraMap && extraMap.get(m[2])) || translateStat(m[2]) || null;
+      if (stat) return (translatePrefix(m[1]) || m[1]) + '：' + stat;
+      // 「標籤: 純數值」整行(物品屬性行「Physical Damage: (140-208)-(210-311)」被拆成關鍵字 span,
+      // 節點層只會翻成「物理 傷害: …」→ 必須在整行層把標籤當前綴翻)
+      const vz = /[A-Za-z]/.test(m[2]) ? valueZh(m[2]) : m[2];
+      if (vz) {
+        const label = translatePrefix(m[1]);
+        if (label) return label + '：' + vz;
       }
     }
-    // 符文/附魔詞綴在 poe.ninja 以「[[ … ]]」包住(或單層 [ … ])→ 剝括號翻內層再包回
-    const br = norm.match(/^(\[+)\s*(.+?)\s*(\]+)$/);
+    // 文化前綴 + 類別名(整行不是既有名稱時才組合,免得「Vaal Arc」這類官方名被拆)
+    const cp = norm.match(/^(\S+)\s+(.+)$/);
+    if (cp && CULTURE_PREFIX[cp[1].toLowerCase()] && !(nameMap && nameMap.has(norm))) {
+      const rest = (uiMap && uiMap.get(cp[2].toLowerCase())) || RUNE_PREFIX[cp[2].toLowerCase()] || null;
+      if (rest) return CULTURE_PREFIX[cp[1].toLowerCase()] + rest;
+    }
+    // 整句後備(無前綴的精髓句等)
+    if (extraMap) {
+      const x = extraMap.get(norm);
+      if (x) return x;
+    }
+    // 符文/附魔詞綴在 poe.ninja 以「[[ … ]]」或「⟦ … ⟧」(U+27E6/27E7,2026-09 站方改用)包住 → 剝括號翻內層再包回
+    const br = norm.match(/^([\[⟦【〚]+)\s*(.+?)\s*([\]⟧】〛]+)$/);
     if (br) {
       const inner = translateLine(br[2]);
       if (inner) return br[1] + ' ' + inner + ' ' + br[3];
     }
+    return translateCompound(norm);
+  }
+
+  // 單一詞語(不走整行規則,避免組合規則互相遞迴):UI 詞 → 名稱
+  function termOnly(t) {
+    return (uiMap && uiMap.get(t.toLowerCase())) || (nameMap && nameMap.get(t)) || null;
+  }
+
+  // 稀有度前綴(官方:Normal→普通、Magic→魔法、Rare→稀有、Unique→傳奇)
+  const RARITY_WORD = { normal: '普通', magic: '魔法', rare: '稀有', unique: '傳奇' };
+
+  // poe.ninja 角色頁主技能摘要列(「0.5/s · 1.0 hits/s · 49% / 387% crit · 100% hit」
+  // 「11 proj / 2f / 1c / 1s · 2m radius」「3.2m radius · 4s duration」「dot」)。
+  // 以「 · 」切段,每段都要命中才整行換;用詞取官方:米(metre)、投射物、分裂(Fork)、
+  // 連鎖(Chain)、穿透(Pierce)、暴擊。
+  const SUMMARY_SEG = [
+    [/^([\d.,]+)m radius$/i, (m) => m[1] + ' 米範圍'],
+    [/^([\d.,]+)s duration$/i, (m) => '持續 ' + m[1] + ' 秒'],
+    [/^([\d.,]+)\/s$/, (m) => m[1] + '/秒'],
+    [/^([\d.,]+) hits\/s$/i, (m) => m[1] + ' 次擊中/秒'],
+    [/^([\d.,]+%) \/ ([\d.,]+%) crit$/i, (m) => '暴擊 ' + m[1] + ' / ' + m[2]],
+    [/^([\d.,]+%) hit$/i, (m) => '命中 ' + m[1]],
+    [/^dot$/i, () => '持續傷害'],
+  ];
+  const PROJ_PART = { proj: '投射物', f: '分裂', c: '連鎖', p: '穿透', s: '分化' }; // Fork→分裂、Split→分化(官方)
+  function summarySeg(seg) {
+    for (const [re, fn] of SUMMARY_SEG) {
+      const m = seg.match(re);
+      if (m) return fn(m);
+    }
+    // 投射物段「20 proj / 1c」「11 proj / 2f / 1c / 1s」
+    if (/^\d+ proj\b/i.test(seg)) {
+      const parts = seg.split(/\s*\/\s*/).map((p) => {
+        const m = p.match(/^(\d+)\s*(proj|f|c|p|s)$/i);
+        return m ? (m[2].toLowerCase() === 'proj' ? m[1] + ' ' + PROJ_PART.proj : PROJ_PART[m[2].toLowerCase()] + ' ' + m[1]) : null;
+      });
+      if (parts.every(Boolean)) return parts.join(' / ');
+    }
     return null;
   }
+
+  // 「標籤: 值」的值(Reservation: 25% Mana、Attack Damage: 153.6% of base、Use Time: 0.80 sec)
+  function valueZh(v) {
+    let m = v.match(/^([+-]?[\d.,]+%?)\s*(Mana|Life|Spirit|Ward|secs?|seconds)$/i);
+    if (m) return m[1] + ' ' + UNIT_WORD[m[2].toLowerCase()];
+    m = v.match(/^([\d.,]+%) of base$/i);
+    if (m) return '基礎的 ' + m[1];
+    return null;
+  }
+
+  // 組合字串(整行各規則都沒命中時的最後手段;每一段都要能翻才整行換,否則維持英文):
+  //   ① 主技能摘要列 ② 「名稱 (item provided)」「名稱 (Tier 3)」尾綴 ③ 稀有度 + 類別(Rare Boots)
+  //   ④ 「A / B」(眾神殿「Lunaris / Ralakesh」、武器配置「Mace / Shield」、勢力「Shaper/Crusader」)
+  //   ⑤ 逗號清單(寶石標籤「Spell, AoE, Fire」→ 詞語以「、」接;星團附魔多句 → 句子以「，」接)
+  function translateCompound(s) {
+    const segs = s.split(/\s+·\s+/);
+    if (segs.length > 1 || /^[\d.,]+(?:m radius|s duration|\/s)$|^dot$|^\d+ proj\b/i.test(s)) {
+      const zh = segs.map(summarySeg);
+      if (zh.every(Boolean)) return zh.join(' · ');
+    }
+    let m = s.match(/^(.+?)\s*\(item provided\)$/i);
+    if (m) {
+      const n = termOnly(m[1]) || translateLine(m[1]);
+      if (n) return n + '（物品提供）';
+    }
+    m = s.match(/^(.+?)\s*\(Tier (\d+)\)$/i);
+    if (m) {
+      const n = termOnly(m[1]);
+      if (n) return n + '（' + ((uiMap && uiMap.get('tier')) || '階級') + ' ' + m[2] + '）';
+    }
+    // 計數尾綴「Past Leagues (26)」
+    m = s.match(/^(.+?)\s*\((\d+)\)$/);
+    if (m) {
+      const n = termOnly(m[1]);
+      if (n) return n + '（' + m[2] + '）';
+    }
+    m = s.match(/^(Normal|Magic|Rare|Unique)\s+(.+)$/i);
+    if (m && !(nameMap && nameMap.has(s))) {
+      const n = termOnly(m[2]);
+      if (n) return RARITY_WORD[m[1].toLowerCase()] + n;
+    }
+    if (/[A-Za-z]\s*\/\s*[A-Za-z]/.test(s) && !/\d/.test(s)) {
+      const parts = s.split(/\s*\/\s*/);
+      const zh = parts.map(termOnly);
+      if (parts.length > 1 && zh.every(Boolean)) return zh.join(s.includes(' / ') ? ' / ' : '/');
+    }
+    const fz = foulborn(s);
+    if (fz) return fz;
+    // 逗號清單只在單一文字節點層級處理:整行合併時一行常是「白字名稱 + 灰字 , 底材」兩個 span
+    // (經濟頁傳奇列「Voices, 3 passives」「, Large Cluster Jewel」),接成一串會把樣式合併掉。
+    if (inLinePass) return null;
+    // 灰字底材節點「, Viridian Jewel」→「，翠綠珠寶」
+    m = s.match(/^,\s*(.+)$/);
+    if (m) {
+      const n = termOnly(m[1]);
+      if (n) return '，' + n;
+    }
+    if (s.includes(', ')) {
+      const parts = s.split(/,\s+/);
+      const part = (p) => termOnly(p) || foulborn(p) || (/^\d+L$/.test(p) ? p : null); // 6L 連結數原樣保留
+      const terms = parts.map(part);
+      // 每段都是單字(寶石標籤「Spell, AoE, Fire」)以「、」接;傳奇變體列「嗓音, 3 passives」以「，」接
+      if (terms.every(Boolean)) return terms.join(parts.every((p) => !/\s/.test(p)) ? '、' : '，');
+      const stats = parts.map((p) => translateStat(p) || (descMap && descMap.get(p)) || null);
+      if (stats.every(Boolean)) return stats.join('，');
+    }
+    return null;
+  }
+
+  // 整行合併(statLinePass)期間為 true:逗號清單規則只給單一節點用
+  let inLinePass = false;
+
+  // 穢生傳奇:官方 ClientStrings「Foulborn {0}」→「穢生 {0}」,{0} 為傳奇名
+  function foulborn(s) {
+    const f = s.match(/^Foulborn\s+(.+)$/);
+    if (!f) return null;
+    const p = uiMap && uiMap.get('foulborn');
+    const n = termOnly(f[1]);
+    return p && n ? p + ' ' + n : null;
+  }
+
+  // 「前綴: 詞綴」的前綴(符文/精髓的物品類型限制):RUNE_PREFIX → UI 字典(含 ClientStrings
+  // EssenceCategory*/WeaponClassDisplayName* 官方類別名)→「A or B」拆開各自翻再以「或」接回
+  // (精髓「One Handed Melee Weapon or Bow」是組合字串,官方表只有各半;「或」= ClientStrings OR)。
+  // 都不行就保留英文(詞綴照樣翻)。
+  function translatePrefix(p) {
+    const one = (x) => {
+      const k = x.toLowerCase();
+      const d = RUNE_PREFIX[k] || (uiMap && uiMap.get(k));
+      if (d) return d;
+      // 「One/Two Handed + 類別」官方表只有部分組合(Two Handed Melee Weapon→雙手近戰武器有、
+      // One Handed Melee Weapon 沒有)→ 以官方詞素組合:One Handed Weapon→單手武器、Melee Weapon→近戰武器
+      const hm = x.match(/^(One|Two) Handed (.+)$/i);
+      if (hm) {
+        const rest = RUNE_PREFIX[hm[2].toLowerCase()] || (uiMap && uiMap.get(hm[2].toLowerCase()));
+        if (rest) return (hm[1].toLowerCase() === 'one' ? '單手' : '雙手') + rest;
+      }
+      return null;
+    };
+    const direct = one(p);
+    if (direct) return direct;
+    // 清單:「A or B」→「A或B」;「A, B, C or D」→「A、B、C或D」(精髓「Boots, Gloves, Helmet or Jewellery」)
+    const parts = p.split(/\s*,\s*|\s+or\s+/i).filter(Boolean);
+    if (parts.length > 1) {
+      const zh = parts.map(one);
+      if (zh.every(Boolean)) {
+        if (!/\s+or\s+/i.test(p)) return zh.join('、');
+        return zh.slice(0, -1).join('、') + '或' + zh[zh.length - 1];
+      }
+    }
+    return null;
+  }
+
+  // 物品類別行的文化前綴(API category:「Ezomyte [Wand]」「Kalguuran [Mace|Two Hand Mace]」「Vaal [Spear]」)。
+  // 前綴沒有獨立的官方字串,取官方名稱中一致的固定譯法:Ezomyte Hold→艾茲麥之握、Kalguuran Cuffs→卡爾葛腕帶、
+  // Vaal Cuirass→瓦爾胸甲(BaseItemTypes/WorldAreas)。只在「前綴 + 可翻的類別名」整行成立時使用。
+  const CULTURE_PREFIX = { ezomyte: '艾茲麥', kalguuran: '卡爾葛', vaal: '瓦爾' };
 
   // 是否該跳過這個文字節點
   function shouldSkip(node) {
@@ -404,7 +617,7 @@
         const restRaw = cm[3];
         let rest = '';
         if (restRaw) {
-          rest = translateAttrAbbr(restRaw);
+          rest = valueZh(restRaw.trim()) || translateAttrAbbr(restRaw);
           // 值整段恰為 UI 詞(如珠寶範圍 Radius: Small→範圍：小、Variable→可變的)→ 直接換
           const restUi = uiMap.get(rest.trim().toLowerCase());
           if (restUi) {
@@ -415,7 +628,7 @@
             rest = rest.replace(multiWordRegex, (m) => multiWordLookup.get(m.toLowerCase()) || m);
           }
         }
-        const out = restRaw ? labelZh + '：' + rest : labelZh + cm[2];
+        const out = labelZh + '：' + rest;
         setNodeValue(node, raw.replace(trimmed, () => out));
         return true;
       }
@@ -462,16 +675,7 @@
     }
 
     // 全部沒命中 → 收進未翻譯收集器(Alt+點按鈕匯出),供白名單流程消化。
-    // 過濾:CSS/標記類字串、品牌名、保留英文的名稱(整行或片段)、
-    // 玩家帳號(含 #/_/@)、純羅馬數字(II/III 武器組編號)。
-    if (
-      misses.size < MISS_CAP && trimmed.length <= 160 && /[A-Za-z]{2,}/.test(trimmed) &&
-      !/[{}<>;]/.test(trimmed) && !/^[.#]/.test(trimmed) && !/[#_@]/.test(trimmed) &&
-      !/^[IVXLCDM]+$/.test(trimmed) && !KEEP_ENGLISH.has(trimmed) &&
-      !keepNames.has(trimmed) && !isKept()
-    ) {
-      misses.add(trimmed);
-    }
+    addMiss(trimmed, node);
     return false;
   }
 
@@ -500,6 +704,23 @@
       if (!inMedia) out.push(n);
     }
     return out;
+  }
+
+  // 行文字(整行比對用):文字節點串接、<br> 視為空白、媒體元素內部略過。
+  // poe.ninja 把 API 給的 "\n"(如 herald_of_ice「…Damage\nConverted to…」)以 pre-line 或
+  // <br> 換行呈現;兩種都要正規化成單一空格,才能對上模板的「換行→空白」整段版本。
+  function lineText(el) {
+    let s = '';
+    const visit = (n) => {
+      if (n.nodeType === 3) { s += n.nodeValue; return; }
+      if (n.nodeType !== 1) return;
+      const tag = n.tagName.toUpperCase();
+      if (tag === 'BR') { s += ' '; return; }
+      if (tag === 'SVG' || tag === 'CANVAS' || tag === 'PICTURE' || tag === 'VIDEO') return;
+      for (let c = n.firstChild; c; c = c.nextSibling) visit(c);
+    };
+    for (let c = el.firstChild; c; c = c.nextSibling) visit(c);
+    return s.replace(/\s+/g, ' ').trim();
   }
 
   // 互動元素:hover 會出 lore 彈窗 / 可點擊。整行合併時必須讓它們保有自己的文字,
@@ -580,6 +801,24 @@
   }
 
   // 整行譯文寫進單一節點(target 未指定 → 第一個有字的節點),其餘清空
+  // 多行段落:poe.ninja 把風味文字等多行描述拆成「每行一個 <div>」,官方繁中卻常是不同行數
+  // (英文兩行「Lioneye earned his moniker by killing / three men with a single arrow.」↔ 繁中一行)
+  // → 逐行對不上。容器的直接子元素全是單行 <div> 時,把各行以空白接起來整段比對描述字典
+  // (build-descriptions 的「換行→空白」整段版本),命中就整段寫進第一行、其餘行清空(可還原)。
+  function multiLineBlock(el) {
+    if (!descMap) return false;
+    const kids = el.children;
+    if (kids.length < 2 || kids.length > 12) return false;
+    for (const k of kids) {
+      if (k.tagName.toUpperCase() !== 'DIV' || k.querySelector(BLOCK_SEL)) return false;
+    }
+    const norm = Array.from(kids, lineText).join(' ').replace(/\s+/g, ' ').trim();
+    if (!/[A-Za-z]/.test(norm)) return false;
+    const zh = descMap.get(norm);
+    if (!zh) return false;
+    return writeWhole(lineTextNodes(el), zh, null);
+  }
+
   function writeWhole(nodes, zh, target) {
     if (!target) {
       for (const n of nodes) if (n.nodeValue && n.nodeValue.trim()) { target = n; break; }
@@ -627,15 +866,37 @@
     els.sort((a, b) => depth(b) - depth(a)); // 最深(最內層的行)優先
     for (const el of els) {
       if (el.__pobTx || !el.isConnected) continue;    // 已處理 / 已被上層替換而脫離
-      if (el.childElementCount === 0) continue;       // 單一文字節點的行 → 交給 translateTextNode
-      if (el.querySelector(BLOCK_SEL)) continue;       // 含區塊子元素 → 不是單行
+      // 單一文字節點的行 → 交給 translateTextNode。但 React 的 {type} taken as 這類 JSX 會在同一元素下
+      // 產生多個相鄰文字節點(「Physical」「 taken as」)、沒有子元素 → 仍要當一行合併。
+      if (el.childElementCount === 0) {
+        let texts = 0;
+        for (let c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 3 && c.nodeValue.trim()) texts++;
+        if (texts < 2) continue;
+      }
+      if (el.querySelector(BLOCK_SEL)) {               // 含區塊子元素 → 不是單行
+        if (multiLineBlock(el)) el.__pobTx = true;       // 但可能是「每行一個 <div>」的多行段落
+        continue;
+      }
       // 行文字 = 排除媒體內部後的文字節點串接(行內 svg 圖示不會擋住合併)
       const nodes = lineTextNodes(el);
-      const norm = nodes.map((n) => n.nodeValue).join('').replace(/\s+/g, ' ').trim();
+      const norm = lineText(el);
       if (!norm || !/[A-Za-z]/.test(norm)) continue;
+      // 單一詞的多節點小容器(藥劑屬性行把每個字包成 <span><span>Life</span> </span>)→ 不在這層翻:
+      // 深層先處理會把「Life」先換成「生命」,外層整行變成「Recovers (920-1104) 生命 over 3 Seconds」對不上模板。
+      // 交給外層整行(或節點層)處理。
+      if (!/\s/.test(norm)) continue;
+      // 視覺多行(命運卡獎勵:「魔血 / 品質: +20% / 兩個固定詞綴 / 已汙染」各自一個 span,換行是獨立的
+      // 「\r\n」文字節點)→ 整行合併會把各行接成一行、顏色也被併掉 → 交給節點層逐段翻。
+      if (nodes.some((n) => /\n/.test(n.nodeValue) && !n.nodeValue.trim())) continue;
       // 整行比對:描述/詞綴模板 → 名稱/UI 詞(poe.ninja 會把名稱拆成多節點,如「Legacy of <a>…</a>」)
-      const zh = translateLine(norm) || (nameMap && nameMap.get(norm)) ||
-                 (uiMap && uiMap.get(norm.toLowerCase())) || null;
+      let zh;
+      inLinePass = true;
+      try {
+        zh = translateLine(norm) || (nameMap && nameMap.get(norm)) ||
+             (uiMap && uiMap.get(norm.toLowerCase())) || null;
+      } finally {
+        inLinePass = false;
+      }
       if (zh) {
         const triggers = el.querySelectorAll(INTERACTIVE_SEL);
         let done = false;
@@ -654,6 +915,9 @@
         if (!done) done = writeWhole(nodes, zh, null);
         if (!done) continue;
         el.__pobTx = true;
+      } else if (nodes.length >= 2) {
+        // 多節點行整行沒命中 → 候選;走完節點層後仍殘留英文才收(見 walk)
+        lineMissCands.push({ el, norm });
       }
     }
   }
@@ -711,6 +975,11 @@
       translateTextNode(node);
       processed.add(node);
     }
+    // 整行候選結算:節點層若已把整行翻完(如「Requires: Level 65」拆 span)就不是缺漏
+    for (const c of lineMissCands) {
+      if (c.el.isConnected && /[A-Za-z]{2,}/.test(c.el.textContent)) addMiss(c.norm, null);
+    }
+    lineMissCands.length = 0;
   }
 
   // poe.ninja 是 SPA,內容會動態載入 → MutationObserver + debounce 重掃。

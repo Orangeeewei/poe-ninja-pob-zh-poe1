@@ -1,5 +1,5 @@
 /**
- * Background Service Worker — poe.ninja PoE2 中文化
+ * Background Service Worker — poe.ninja PoE1 中文化
  * 唯一職責:每天檢查 GitHub 上的翻譯資料版本,有更新才下載並快取。
  */
 
@@ -10,7 +10,7 @@
 
 // 若改用別的 repo，改這三個值即可。
 const GH_USER = 'Orangeeewei';
-const GH_REPO = 'poe-ninja-pob-zh';
+const GH_REPO = 'poe-ninja-pob-zh-poe1';
 const GH_BRANCH = 'main';
 const RAW_BASE = `https://raw.githubusercontent.com/${GH_USER}/${GH_REPO}/${GH_BRANCH}/data`;
 
@@ -63,7 +63,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 // Service Worker 啟動時的初始化
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('[Background] poe.ninja PoE2 中文化 installed');
+  console.log('[Background] poe.ninja PoE1 中文化 installed');
   ensureAlarm();
   checkAndUpdateDict('onInstalled');
 });

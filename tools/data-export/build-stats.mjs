@@ -53,8 +53,12 @@ function stripRefs(s) {
     return pipe === -1 ? inner : inner.slice(pipe + 1);
   });
 }
-// {0}, {0:+d}, {0:d} -> {0}
-const normPlaceholders = (s) => s.replace(/\{(\d+)(?::[^}]*)?\}/g, '{$1}');
+// {0}, {0:+d}, {0:d} -> {0};無編號的 {}(GGG 偶有,如 sanctum_relic「Cannot be used with Trials below level {}」)
+// 依出現順序補編號 → 執行期才能捕數字(否則 "{}" 被當字面,80 對不上)。EN/TW 各自編號,順序一致。
+const normPlaceholders = (s) => {
+  let k = 0;
+  return s.replace(/\{(\d+)(?::[^}]*)?\}/g, '{$1}').replace(/\{\}/g, () => '{' + (k++) + '}');
+};
 // en/zh 清理:還原 refs + 正規化佔位符
 const clean = (s) => normPlaceholders(stripRefs(s)).trim();
 // bucketKey:數字與 {N} 都換成 {}
@@ -81,12 +85,23 @@ function detectTextIdx(tail) {
 
 const isBroken = (s) => /#?ERROR!?/i.test(s) || /^＃?ERROR/i.test(s);
 
-function parseCsd(text, acc, textAcc) {
+// 區塊開頭有兩種:stat_descriptions.txt 等是單獨一行 "description";
+// PoE1 的技能類描述檔(skill_/buff_skill_/aura_skill_/curse_skill_…)則是
+// "description <識別名>"(例 description golem_grants_damage)。
+// pass='bare' 只收前者、pass='named' 只收後者。main 先跑完所有檔的 bare 再跑 named,
+// 同一句英文已有模板時 addPair 不覆寫 → 既有翻譯維持原樣,技能區塊只補缺的句子。
+const DESC_HEAD = { bare: /^description$/, named: /^description\s+\S/ };
+
+function parseCsd(text, acc, textAcc, pass = 'bare') {
+  const head = DESC_HEAD[pass];
   const lines = text.split(/\r?\n/);
   let i = 0;
   const n = lines.length;
+  const skipBlank = () => { while (i < n && lines[i].trim() === '') i++; };
   const readVariant = () => {
-    // 目前行應為數量 M
+    // 目前行應為數量 M(區塊內偶有空白行:local_flask_ward_regeneration… 英文變體後接兩行空白,
+    // 舊版在此中斷 → 整段 lang 變體全丟、繁中模板消失)
+    skipBlank();
     const m = parseInt(lines[i].trim(), 10);
     i++;
     const out = [];
@@ -121,21 +136,23 @@ function parseCsd(text, acc, textAcc) {
   };
 
   while (i < n) {
-    if (lines[i].trim() !== 'description') { i++; continue; }
-    i++; // skip 'description'
+    if (!head.test(lines[i].trim())) { i++; continue; }
+    i++; // skip 'description' 行
     if (i >= n) break;
     // id 行: "<count> id1 id2 ..."（我們不需要 id，跳過即可）
     i++;
     if (i >= n) break;
     // 英文(預設)變體
     const en = readVariant();
-    // 各語言變體
+    // 各語言變體(lang 行之間可能夾空白行)
     let zh = null;
+    skipBlank();
     while (i < n && /^\s*lang\s+"/.test(lines[i])) {
       const langName = lines[i].match(/^\s*lang\s+"([^"]+)"/)[1];
       i++;
       const variant = readVariant();
       if (langName === LANG) zh = variant;
+      skipBlank();
     }
     if (!zh) continue;
 
@@ -167,14 +184,21 @@ function parseCsd(text, acc, textAcc) {
       // 註:.csd 內換行是字面 "\n"(反斜線+n 兩字元),非真換行。
       // 僅在整段佔位符一致(EN/繁中對得上)時才拆,避免拆出錯位垃圾配對。
       const NL = /\\n|\n/;
-      if (NL.test(p.enC) && NL.test(p.zhC) && phEqual(p.enC, p.zhC)) {
+      const enNL = NL.test(p.enC);
+      const zhNL = NL.test(p.zhC);
+      if (enNL && zhNL && phEqual(p.enC, p.zhC)) {
         const es = p.enC.split(NL);
         const zs = p.zhC.split(NL);
         if (es.length === zs.length) {
           for (let j = 0; j < es.length; j++) addPair(es[j].trim(), zs[j].trim(), []);
         }
-        // 「換行→空白」整段版本:poe.ninja 有時把多行詞綴連成單一行容器顯示
-        // (例:昇華「25% more Skill Speed … you have a One-Handed Martial Weapon …」)。
+      }
+      // 「換行→空白」整段版本:poe.ninja 把 API 給的 "\n" 以 pre-line 換行顯示、引擎整行
+      // 合併時空白正規化成單一空格 → 必須有這個版本才能命中。
+      // ⚠️ 只要「任一邊」含換行就要做(不可要求兩邊都有):GGG 常見英文兩行、繁中一行
+      //   (例 herald_of_ice「{0}% of Explosion Physical Damage\nConverted to Cold Damage」
+      //    ↔「{0}%的爆炸物理傷害轉換為冰冷傷害」),舊條件會整個漏掉 → 畫面殘留半翻英文。
+      if (enNL || zhNL) {
         const joinNL = (s) => s.replace(/\\n|\n/g, ' ').replace(/\s+/g, ' ').trim();
         addPair(joinNL(p.enC), joinNL(p.zhC), p.textIdx);
       }
@@ -189,14 +213,19 @@ async function main() {
   console.log(`自動探索到 ${files.length} 個 .csd`);
   const acc = new Map();
   const textAcc = []; // 含文字佔位符(技能名等)的模板
+  const texts = [];
   for (const f of files) {
     const data = await loader.tryGetFileContents(f);
     if (!data) { console.warn('skip (missing):', f); continue; }
-    const text = Buffer.from(data).toString('utf16le');
-    const before = acc.size;
-    parseCsd(text, acc, textAcc);
-    const added = acc.size - before;
-    if (added) console.log(`${f.replace(STAT_DIR + '/', '')}: +${added}`);
+    texts.push([f, Buffer.from(data).toString('utf16le')]);
+  }
+  for (const pass of ['bare', 'named']) {
+    for (const [f, text] of texts) {
+      const before = acc.size;
+      parseCsd(text, acc, textAcc, pass);
+      const added = acc.size - before;
+      if (added) console.log(`${f.replace(STAT_DIR + '/', '')}${pass === 'named' ? '(具名區塊)' : ''}: +${added}`);
+    }
   }
 
   // 精選 ClientStrings 帶佔位符的藥劑/護符文字(回復/消耗/持續)→ 當成詞綴模板。
@@ -257,6 +286,24 @@ async function main() {
   ];
   for (const t of SUPPLEMENT_TEXT_TEMPLATES) {
     if (!textAcc.some((e) => e.en === t.en)) textAcc.push(t);
+  }
+
+  // 站方改寫句 → 同一 stat 的官方繁中。poe.ninja 顯示傳奇碑牌時把 map_breach_monster_quantity_+%
+  // 寫成「Breaches in Map have {0}% increased Monster density」,.csd 與 poe2db 都只有
+  // 「Breaches have {0}% increased Monster density」(繁中「裂痕增加{0}%怪物密度」)。
+  // 這裡只做「英文鍵改寫」,繁中一字不改地沿用官方;查無同 stat 官方句的(譫妄「…faster with distance
+  // from the mirror」)不補,保留英文。
+  const SITE_REWORDED = [
+    { site: 'Breaches in Map have {0}% increased Monster density', official: 'Breaches have {0}% increased Monster density' },
+    { site: 'Breaches in Map have {0}% reduced Monster density', official: 'Breaches have {0}% reduced Monster density' },
+  ];
+  for (const r of SITE_REWORDED) {
+    const src = acc.get(bucketize(r.official));
+    const hit = src && src.find((e) => e.en === r.official);
+    if (!hit) { console.warn('SITE_REWORDED 找不到官方句:', r.official); continue; }
+    const key = bucketize(r.site);
+    if (!acc.has(key)) acc.set(key, []);
+    if (!acc.get(key).some((e) => e.en === r.site)) acc.get(key).push({ en: r.site, zh: hit.zh });
   }
 
   // 天賦名佔位符模板:某些 stat 的 {0} 是「天賦/基石名」(文字),而非數字。
