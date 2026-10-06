@@ -55,6 +55,26 @@
     "world_areas.json": {
       "firstSeen": "2026-07-21",
       "status": "unvalidated"
+    },
+    "mercenary_builds.json": {
+      "firstSeen": "2026-10-06",
+      "status": "unvalidated"
+    },
+    "mercenary_classes.json": {
+      "firstSeen": "2026-10-06",
+      "status": "unvalidated"
+    },
+    "mercenary_flavour_text.json": {
+      "firstSeen": "2026-10-06",
+      "status": "unvalidated"
+    },
+    "mercenary_skills.json": {
+      "firstSeen": "2026-10-06",
+      "status": "unvalidated"
+    },
+    "mercenary_supports.json": {
+      "firstSeen": "2026-10-06",
+      "status": "unvalidated"
     }
   }
 }
