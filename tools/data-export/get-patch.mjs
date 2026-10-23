@@ -27,6 +27,11 @@ function probe(host, port) {
   });
 }
 
-const version = await probe('patch.pathofexile.com', 12995);
+// patch server 偶爾會短暫不回應(CI 曾因單次失敗整輪掛掉),失敗就隔幾秒重試
+let version = null;
+for (let i = 0; i < 4 && !version; i++) {
+  if (i) await new Promise((r) => setTimeout(r, 5000 * i));
+  version = await probe('patch.pathofexile.com', 12995);
+}
 if (!version) { console.error('無法取得 PoE1 patch 版本'); process.exit(1); }
 console.log(version);
