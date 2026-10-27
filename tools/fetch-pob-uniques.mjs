@@ -27,6 +27,8 @@ const REPO = 'PathOfBuildingCommunity/PathOfBuilding';
 const API = `https://api.github.com/repos/${REPO}/contents/src/Data/Uniques`;
 const RAW = `https://raw.githubusercontent.com/${REPO}/master/src/Data/Uniques/`;
 const H = { 'User-Agent': 'poe1-mcp uniques fetch', Accept: 'application/vnd.github+json' };
+// 匿名呼叫每小時 60 次,CI runner 共用 IP 常被用光而回 403;有 token 就帶上(額度 1000+/小時)
+if (process.env.GITHUB_TOKEN) H.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
 
 // ---- PoB Uniques Lua 解析器 ----
 // 每款傳奇 = 一個 `[[ ... ]]` 區塊。行結構:

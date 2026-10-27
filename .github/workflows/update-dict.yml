@@ -46,6 +46,8 @@ jobs:
       #   ・抽取天賦樹 —— 讀本機 PoB 安裝路徑,CI 上沒有
       #   ・更新交易詞綴對照 —— pathofexile.com API 對非瀏覽器 UA 回 403(Cloudflare)
       - name: 更新 PoE1 資料
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node update-poe1.mjs
 
       - name: 提交更新
