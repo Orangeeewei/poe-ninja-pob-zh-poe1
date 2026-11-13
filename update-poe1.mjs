@@ -3,6 +3,9 @@
 // log 寫入 update.log。用 Node 而非 PowerShell:避 PS5.1 讀 UTF-8/CJK 腳本的編碼坑。
 // ★ 進度標記:每步輸出「[進度 i/N] 標籤」——MCP 端(lib-autoupdate.updateProgress)靠這個
 //   算百分比,畫即時進度條。改動步驟時只要維持這個格式即可。
+// ★ 所有子行程一律 windowsHide:本腳本被 MCP 以 detached 啟動時自己沒有主控台,
+//   子行程(node / luajit)就會被 Windows 配一個全新的主控台 = 更新途中亂跳的小黑窗。
+//   唯一該出現的視窗是 poe-mcp/update-window.mjs 那個進度條。
 import { execFileSync, spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -17,14 +20,14 @@ const log = (m) => { const line = `${new Date().toISOString()}  ${m}`; console.l
 // 時訊息會整個消失(MCP 背景更新正是這情況),導致 log 只剩一句無用的 Command failed。
 const node = (args, cwd, env = {}) => {
   try {
-    return execFileSync(process.execPath, args, { cwd, stdio: ['ignore', 'inherit', 'pipe'], env: { ...process.env, ...env } });
+    return execFileSync(process.execPath, args, { cwd, stdio: ['ignore', 'inherit', 'pipe'], windowsHide: true, env: { ...process.env, ...env } });
   } catch (e) {
     const err = (e.stderr?.toString() || '').trim();
     if (err) e.message += `\n--- stderr(尾端)---\n${err.split('\n').slice(-15).join('\n')}`;
     throw e;
   }
 };
-const nodeOut = (args, cwd, env = {}) => execFileSync(process.execPath, args, { cwd, env: { ...process.env, ...env } }).toString().trim();
+const nodeOut = (args, cwd, env = {}) => execFileSync(process.execPath, args, { cwd, windowsHide: true, env: { ...process.env, ...env } }).toString().trim();
 
 // —— 匯出看門狗:自動跳過「讀取卡死」的表 ——
 // pathofexile-dat 讀某些表(社群 schema 與現行遊戲資料欄位對不上)會讀到垃圾陣列長度 →
@@ -38,7 +41,7 @@ const skipFile = join(de, 'skip-tables.json');
 function runExportOnce(envP) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['node_modules/pathofexile-dat/dist/cli/run.js'],
-      { cwd: de, env: { ...process.env, ...envP } });
+      { cwd: de, windowsHide: true, env: { ...process.env, ...envP } });
     let lastTable = null, errBuf = '', timer = null, settled = false;
     const arm = () => {
       clearTimeout(timer);

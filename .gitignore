@@ -11,14 +11,12 @@ tools/data-export/*.csd
 tools/data-export/config.json
 tools/data-export/schema.json
 
-# 工作筆記(只給接手的視窗看,不進 github)
-HANDOFF-交接.md
-CLAUDE.md
-PoE1-改造記錄.md
-
 # 打包輸出
 dist/
 
 # MCP 開機自檢的執行期檔案(節流戳記 + 併發鎖)
 .last-check
 .update.lock
+
+# IDE 設定
+.idea/
