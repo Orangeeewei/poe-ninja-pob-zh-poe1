@@ -18,10 +18,10 @@ import fs from 'node:fs/promises';
 
 const PATCH = process.env.PATCH || process.env.POE2_PATCH || '3.28.0.16';   // PoE1 fallback
 const OUT = path.join(process.cwd(), '..', '..', 'data', 'stat-templates.json');
-// PoE1:詞綴描述在 metadata/statdescriptions/*.txt(UTF-16LE,格式與 PoE2 .csd 相容)。
-// (PoE2 是 data/statdescriptions/*.csd)
+// PoE1:詞綴描述在 metadata/statdescriptions/。3.29 以前是 *.txt,3.30 起改成 *.csd
+// (UTF-16LE,格式同 PoE2 的 .csd),兩種都收。只收 .txt 時 3.30 只撈到 1 個檔、模板剩 12 條。
 const STAT_DIR = 'metadata/statdescriptions';
-const STAT_EXT = '.txt';
+const STAT_EXTS = ['.txt', '.csd'];
 
 const LANG = 'Traditional Chinese';
 
@@ -38,7 +38,7 @@ async function listCsdFiles(cdn) {
   const visit = (dir) => {
     let c;
     try { c = getDirContent(dir, pr, idx.dirsInfo); } catch { return; }
-    for (const f of c.files) if (f.endsWith(STAT_EXT)) out.push(f);
+    for (const f of c.files) if (STAT_EXTS.some((e) => f.endsWith(e))) out.push(f);
     for (const d of c.dirs) visit(d);
   };
   visit(STAT_DIR);
@@ -327,6 +327,12 @@ async function main() {
   const templates = {};
   let lines = 0;
   for (const [k, v] of acc) { templates[k] = v; lines += v.length; }
+  // 防線:比現有檔少一半以上多半是遊戲改了檔名或格式,寧可失敗也不要把壞資料推給使用者
+  const prev = await fs.readFile(OUT, 'utf8').then((s) => JSON.parse(s).count || 0).catch(() => 0);
+  if (prev && lines < prev * 0.5 && !process.env.ALLOW_SHRINK) {
+    console.error(`模板從 ${prev} 條掉到 ${lines} 條,疑似遊戲檔案改版沒抓到,不覆寫(確定要寫請設 ALLOW_SHRINK=1)`);
+    process.exit(1);
+  }
   await fs.writeFile(
     OUT,
     JSON.stringify({ _source: 'PoE2 stat_descriptions .csd', count: lines, templates, textTemplates: textAcc }),
